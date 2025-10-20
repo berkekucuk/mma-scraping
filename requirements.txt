@@ -1,0 +1,11 @@
+# Core Scrapy Framework
+Scrapy==2.13.2
+
+# Database Integration
+supabase==2.16.0
+
+# Environment Variables
+python-dotenv==1.1.1
+
+# Item Adapter (Scrapy dependency)
+itemadapter==0.11.0
