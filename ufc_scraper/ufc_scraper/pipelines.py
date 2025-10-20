@@ -96,26 +96,26 @@ class SupabasePipeline:
             spider.logger.error(f"❌ Supabase kaydetme hatası: {str(e)}")
             return item
 
-    def _save_event_and_fights(self, event_data, spider):
+    def _save_event_and_fights(self, event_item, spider):
         try:
-            event_id = event_data['event_id']
+            event_id = event_item['event_id']
             
             # Event'i kaydet
             event_record = {
                 'event_id': event_id,
-                'event_type': event_data.get('event_type', ''),
-                'event_name': event_data.get('event_name', ''),
-                'date_time': event_data.get('date_time', ''),
-                'venue': event_data.get('venue', ''),
-                'location': event_data.get('location', '')
+                'event_type': event_item.get('event_type', ''),
+                'event_name': event_item.get('event_name', ''),
+                'date_time': event_item.get('date_time', ''),
+                'venue': event_item.get('venue', ''),
+                'location': event_item.get('location', '')
             }
             
             # Event'i upsert et
             result = self.supabase.table('events').upsert(event_record, on_conflict='event_id').execute()
-            spider.logger.info(f"✅ Event kaydedildi: {event_data['event_name']}")
+            spider.logger.info(f"✅ Event kaydedildi: {event_item['event_name']}")
             
             # Fight'ları kaydet
-            fights = event_data.get('fights', [])
+            fights = event_item.get('fights', [])
             for fight in fights:
                 self._save_fight(fight, event_id, spider)
                 
@@ -124,35 +124,39 @@ class SupabasePipeline:
         except Exception as e:
             spider.logger.error(f"❌ Event kaydetme hatası: {str(e)}")
 
-    def _save_fight(self, fight_data, event_id, spider):
+    def _save_fight(self, fight_item, event_id, spider):
         try:
             # Fighter'ları kaydet (sadece temel bilgiler)
-            fighter1_id = fight_data.get('fighter1', {}).get('id')
-            fighter1_name = fight_data.get('fighter1', {}).get('name', '')
-            fighter2_id = fight_data.get('fighter2', {}).get('id')
-            fighter2_name = fight_data.get('fighter2', {}).get('name', '')
+            fighter1_id = fight_item.get('fighter1', {}).get('id')
+            fighter1_name = fight_item.get('fighter1', {}).get('name', '')
+            fighter1_url = fight_item.get('fighter1', {}).get('url', '')
+            fighter1_image_url = fight_item.get('fighter1', {}).get('image_url', '')
+            fighter2_id = fight_item.get('fighter2', {}).get('id')
+            fighter2_name = fight_item.get('fighter2', {}).get('name', '')
+            fighter2_url = fight_item.get('fighter2', {}).get('url', '')
+            fighter2_image_url = fight_item.get('fighter2', {}).get('image_url', '')
             
             # Fighter1'i kaydet
-            if fighter1_id and fighter1_name:
-                self._save_fighter_basic(fighter1_id, fighter1_name, spider)
+            if fighter1_id:
+                self._save_fighter_basic(fighter1_id, fighter1_name, fighter1_url, fighter1_image_url, spider)
             
             # Fighter2'yi kaydet
-            if fighter2_id and fighter2_name:
-                self._save_fighter_basic(fighter2_id, fighter2_name, spider)
+            if fighter2_id:
+                self._save_fighter_basic(fighter2_id, fighter2_name, fighter2_url, fighter2_image_url, spider)
             
             # Fight'ı kaydet
             fight_record = {
-                'fight_id': fight_data.get('fight_id'),
+                'fight_id': fight_item.get('fight_id'),
                 'event_id': event_id,
                 'fighter1_id': fighter1_id,
                 'fighter2_id': fighter2_id,
-                'winner_id': fight_data.get('winner_id'),
-                'fight_result': fight_data.get('fight_result', ''),
-                'method': fight_data.get('method', ''),
-                'round_info': fight_data.get('round_info', ''),
-                'weight_class': fight_data.get('weight_class', ''),
-                'fighter1_age_at_fight': fight_data.get('fighter1', {}).get('age_at_fight', ''),
-                'fighter2_age_at_fight': fight_data.get('fighter2', {}).get('age_at_fight', ''),
+                'winner_id': fight_item.get('winner_id'),
+                'fight_result': fight_item.get('fight_result', ''),
+                'method': fight_item.get('method', ''),
+                'round_info': fight_item.get('round_info', ''),
+                'weight_class': fight_item.get('weight_class', ''),
+                'fighter1_age_at_fight': fight_item.get('fighter1', {}).get('age_at_fight', ''),
+                'fighter2_age_at_fight': fight_item.get('fighter2', {}).get('age_at_fight', ''),
             }
             
             # Fight'ı upsert et
@@ -162,12 +166,13 @@ class SupabasePipeline:
         except Exception as e:
             spider.logger.error(f"❌ Fight kaydetme hatası: {str(e)}")
 
-    def _save_fighter_basic(self, fighter_id, fighter_name, spider):
-        """Sadece temel fighter bilgilerini kaydeder"""
+    def _save_fighter_basic(self, fighter_id, fighter_name, fighter_url, fighter_image_url, spider):
         try:
             fighter_record = {
                 'fighter_id': fighter_id,
-                'name': fighter_name
+                'name': fighter_name,
+                'url': fighter_url,
+                'image_url': fighter_image_url
             }
             
             # Fighter'ı upsert et

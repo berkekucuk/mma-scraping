@@ -11,7 +11,7 @@ class UFCEventsSpider(scrapy.Spider):
     allowed_domains = ["tapology.com"]
 
     def start_requests(self):
-        url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page=8"
+        url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page=1"
         for item in self.fetch_or_load(url=url, callback=self.parse):
             yield item  
 

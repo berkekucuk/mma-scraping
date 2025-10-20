@@ -54,23 +54,6 @@ class CardParser:
         fighter1_image_url = fight.css('div.relative.order-first img::attr(src)').get(default='').strip()
         fighter2_image_url = fight.css('div.relative.order-last img::attr(src)').get(default='').strip()
         
-        # Her iki dövüşçüyü de cache'e kaydet
-        if fighter1_id and fighter1_url:
-            FighterCacheManager.save_fighter_url(
-                fighter_id=fighter1_id,
-                fighter_url=fighter1_url,
-                image_url=fighter1_image_url,
-                fighter_name=fighter1
-            )
-        
-        if fighter2_id and fighter2_url:
-            FighterCacheManager.save_fighter_url(
-                fighter_id=fighter2_id,
-                fighter_url=fighter2_url,
-                image_url=fighter2_image_url,
-                fighter_name=fighter2
-            )
-
         weight_class = fight.css('span.bg-tap_darkgold::text').get(default='').strip()
         method = fight.css('span.uppercase::text').get(default='').strip()
         round_info = fight.css('span.text-xs11.md\:text-xs10.leading-relaxed::text').get(default='').strip()
@@ -91,11 +74,15 @@ class CardParser:
                 'name': fighter1,
                 'id': fighter1_id,
                 'age_at_fight': fighter1_age_at_fight,
+                'url': fighter1_url,
+                'image_url': fighter1_image_url,
             },
             'fighter2': {
                 'name': fighter2,
                 'id': fighter2_id,
                 'age_at_fight': fighter2_age_at_fight,
+                'url': fighter2_url,
+                'image_url': fighter2_image_url,
             },
             'fight_result': fight_result, 
             'winner_id': winner_id,
@@ -106,31 +93,24 @@ class CardParser:
 
     @staticmethod
     def determine_fight_result(fight):
-        blue_text = fight.css("span.text-blue-100.font-bold::text").get()
-        if blue_text:
-            result_text = blue_text.strip().upper()
-            if 'NC' in result_text or 'N' in result_text:
-                return 'no_contest'
-            elif 'D' in result_text:
-                return 'draw'
-            else:
-                return 'win'
+        color_map = {
+            "text-blue-100": "no_contest",
+            "text-neutral-100": "draw",
+            "text-green-100": "win"
+        }
 
-        neutral_text = fight.css("span.text-neutral-100.font-bold::text").get()
-        if neutral_text:
-            result_text = neutral_text.strip().upper()
-            if 'D' in result_text:
-                return 'draw'
-            elif 'NC' in result_text or 'N' in result_text:
-                return 'no_contest'
-            else:
-                return 'loss'
+        for color_class, result in color_map.items():
+            text = fight.css(f"span.{color_class}.font-bold::text").get()
+            if text:
+                text = text.strip().upper()
+                
+                if "N" in text:
+                    return "no_contest"
+                elif "D" in text:
+                    return "draw"
+                elif "W" in text:
+                    return "win"
+                
+                return "unknown"
 
-        green_text = fight.css("span.text-green-100.font-bold::text").get()
-        if green_text:
-            return 'win'
-
-        return 'unknown'
-
-
-    
+        return "pending"
