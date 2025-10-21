@@ -233,6 +233,9 @@ $RECYCLE.BIN/
 html_cache/
 *.json
 
+# Supabase
+supabase/
+
 # Log files
 *.log
 logs/

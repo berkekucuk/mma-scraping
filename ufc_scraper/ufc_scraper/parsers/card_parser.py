@@ -1,5 +1,6 @@
 from ..utils.url_utils import URLUtils
-from ..services.fighter_cache_manager import FighterCacheManager
+from ..utils.date_time_utils import DateTimeUtils
+from ..utils.fight_result import FightResult
 
 class CardParser:
 
@@ -9,14 +10,17 @@ class CardParser:
         event_name = response.css('h2::text').get(default='').strip()
 
         container = response.css('ul[data-controller="unordered-list-background"]')
-        date_time = container.css('span:contains("Date/Time:") + span::text').get(default='').strip()
+
+        date_time_str = container.css('span:contains("Date/Time:") + span::text').get(default='').strip()
+        date_time = DateTimeUtils.parse_tapology_datetime(date_time_str)
+        
         venue = container.css('span:contains("Venue:") + span::text').get(default='').strip()
         location = container.css('span:contains("Location:") + span a::text').get(default='').strip()
 
         return {
             'event_type': event_type,
             'event_name': event_name,
-            'date_time': date_time,
+            'date_time': date_time,  
             'venue': venue,
             'location': location
         }
@@ -63,7 +67,7 @@ class CardParser:
         fighter1_age_at_fight = ages[0] if len(ages) > 0 else ''
         fighter2_age_at_fight = ages[1] if len(ages) > 1 else ''
 
-        fight_result = CardParser.determine_fight_result(fight)
+        fight_result = FightResult.determine_fight_result(fight)
         winner_id = None
         if fight_result == 'win':
             winner_id = fighter1_id
@@ -91,26 +95,3 @@ class CardParser:
             'round_info': round_info,
         }
 
-    @staticmethod
-    def determine_fight_result(fight):
-        color_map = {
-            "text-blue-100": "no_contest",
-            "text-neutral-100": "draw",
-            "text-green-100": "win"
-        }
-
-        for color_class, result in color_map.items():
-            text = fight.css(f"span.{color_class}.font-bold::text").get()
-            if text:
-                text = text.strip().upper()
-                
-                if "N" in text:
-                    return "no_contest"
-                elif "D" in text:
-                    return "draw"
-                elif "W" in text:
-                    return "win"
-                
-                return "unknown"
-
-        return "pending"
