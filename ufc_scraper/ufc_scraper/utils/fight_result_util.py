@@ -1,5 +1,5 @@
 
-class FightResult:
+class FightResultUtil:
 
     @staticmethod
     def determine_fight_result(fight):

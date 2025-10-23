@@ -1,5 +1,5 @@
 
-class URLUtils:
+class URLUtil:
 
     @staticmethod
     def extract_event_id(url):

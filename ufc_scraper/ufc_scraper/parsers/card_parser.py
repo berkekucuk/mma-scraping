@@ -1,6 +1,7 @@
-from ..utils.url_utils import URLUtils
-from ..utils.date_time_utils import DateTimeUtils
-from ..utils.fight_result import FightResult
+from ..utils.fighter_age_util import FighterAgeUtil
+from ..utils.url_util import URLUtil
+from ..utils.date_time_util import DateTimeUtil
+from ..utils.fight_result_util import FightResultUtil
 
 class CardParser:
 
@@ -12,7 +13,7 @@ class CardParser:
         container = response.css('ul[data-controller="unordered-list-background"]')
 
         date_time_str = container.css('span:contains("Date/Time:") + span::text').get(default='').strip()
-        date_time = DateTimeUtils.parse_tapology_datetime(date_time_str)
+        date_time = DateTimeUtil.parse_tapology_datetime(date_time_str)
         
         venue = container.css('span:contains("Venue:") + span::text').get(default='').strip()
         location = container.css('span:contains("Location:") + span a::text').get(default='').strip()
@@ -40,7 +41,7 @@ class CardParser:
     @staticmethod
     def parse_single_fight(fight, response):
         fight_relative_url = fight.css('span.text-xs11 a::attr(href)').get()
-        fight_id = URLUtils.extract_fight_id(fight_relative_url)
+        fight_id = URLUtil.extract_fight_id(fight_relative_url)
 
         # Dövüşçü bilgilerini al
         fighter1 = fight.css('div#f0smNameContainer a.link-primary-red::text').get(default='').strip()
@@ -52,8 +53,8 @@ class CardParser:
         fighter1_url = response.urljoin(fighter1_relative_url) if fighter1_relative_url else ''
         fighter2_url = response.urljoin(fighter2_relative_url) if fighter2_relative_url else ''
         
-        fighter1_id = URLUtils.extract_fighter_id(fighter1_url) if fighter1_url else None
-        fighter2_id = URLUtils.extract_fighter_id(fighter2_url) if fighter2_url else None
+        fighter1_id = URLUtil.extract_fighter_id(fighter1_url) if fighter1_url else None
+        fighter2_id = URLUtil.extract_fighter_id(fighter2_url) if fighter2_url else None
         
         fighter1_image_url = fight.css('div.relative.order-first img::attr(src)').get(default='').strip()
         fighter2_image_url = fight.css('div.relative.order-last img::attr(src)').get(default='').strip()
@@ -64,10 +65,12 @@ class CardParser:
 
         ages = fight.css('table#boutComparisonTable td.text-neutral-950::text').getall()
         ages = [age.strip() for age in ages if 'years' in age]
-        fighter1_age_at_fight = ages[0] if len(ages) > 0 else ''
-        fighter2_age_at_fight = ages[1] if len(ages) > 1 else ''
+        fighter1_age_at_fight_str = ages[0] if len(ages) > 0 else ''
+        fighter2_age_at_fight_str = ages[1] if len(ages) > 1 else ''
+        fighter1_age_at_fight = FighterAgeUtil.parse_fighter_age(fighter1_age_at_fight_str)
+        fighter2_age_at_fight = FighterAgeUtil.parse_fighter_age(fighter2_age_at_fight_str)
 
-        fight_result = FightResult.determine_fight_result(fight)
+        fight_result = FightResultUtil.determine_fight_result(fight)
         winner_id = None
         if fight_result == 'win':
             winner_id = fighter1_id

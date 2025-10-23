@@ -1,7 +1,7 @@
 
 import scrapy
 from ..services.html_cache_manager import HtmlCacheManager
-from ..utils.url_utils import URLUtils
+from ..utils.url_util import URLUtil
 from ..parsers.card_parser import CardParser
 from ..items import EventItem
 
@@ -43,7 +43,7 @@ class UFCEventsSpider(scrapy.Spider):
             relative_url = event.css('div.promotion a::attr(href)').get(default='')
             if relative_url is not None:
                 url = response.urljoin(relative_url)
-                event_id = URLUtils.extract_event_id(relative_url)
+                event_id = URLUtil.extract_event_id(relative_url)
                 for item in self.fetch_or_load(url=url, callback=self.parse_event, cb_kwargs={'event_id': event_id}):
                     yield item
 
