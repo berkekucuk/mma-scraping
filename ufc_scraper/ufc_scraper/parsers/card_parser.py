@@ -12,11 +12,11 @@ class CardParser:
 
         container = response.css('ul[data-controller="unordered-list-background"]')
 
-        date_time_str = container.css('span:contains("Date/Time:") + span::text').get(default='').strip()
+        date_time_str = container.xpath("//span[contains(text(), 'Date/Time')]/following-sibling::span/text()").get(default='').strip()
         date_time = DateTimeUtil.parse_tapology_datetime(date_time_str)
         
-        venue = container.css('span:contains("Venue:") + span::text').get(default='').strip()
-        location = container.css('span:contains("Location:") + span a::text').get(default='').strip()
+        venue = container.xpath("//span[contains(text(), 'Venue')]/following-sibling::span/text()").get(default='').strip()
+        location = container.xpath("//span[contains(text(), 'Location')]/following-sibling::span//text()").get(default='').strip()
 
         return {
             'event_type': event_type,
