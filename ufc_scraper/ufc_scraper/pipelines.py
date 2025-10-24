@@ -228,7 +228,7 @@ class SupabasePipeline:
                         
                     # 4. Arama tablolarının İÇ ID'lerini al/oluştur
                     method_internal_id = self._get_or_create_id_for_lookup(
-                        spider, "fight_methods", "method_id", fight.get('method')
+                        spider, "methods", "method_id", fight.get('method')
                     )
                     result_internal_id = self._get_or_create_id_for_lookup(
                         spider, "fight_results", "result_id", fight.get('fight_result')
