@@ -2,6 +2,7 @@ from ..utils.fighter_age_util import FighterAgeUtil
 from ..utils.url_util import URLUtil
 from ..utils.date_time_util import DateTimeUtil
 from ..utils.fight_result_util import FightResultUtil
+from ..items import FightItem, FightParticipationItem, FighterItem
 
 class CardParser:
 
@@ -14,87 +15,96 @@ class CardParser:
 
         date_time_str = container.xpath("//span[contains(text(), 'Date/Time')]/following-sibling::span/text()").get(default='').strip()
         date_time = DateTimeUtil.parse_tapology_datetime(date_time_str)
-        
+
         venue = container.xpath("//span[contains(text(), 'Venue')]/following-sibling::span/text()").get(default='').strip()
+
         location = container.xpath("//span[contains(text(), 'Location')]/following-sibling::span//text()").get(default='').strip()
 
         return {
             'event_type': event_type,
             'event_name': event_name,
-            'date_time': date_time,  
+            'date_time': date_time,
             'venue': venue,
-            'location': location
+            'location': location,
         }
 
     @staticmethod
-    def parse_fights(response):
+    def parse_fights(response, event_id):
+        fights = response.css('ul[data-event-view-toggle-target="list"] > li[data-controller="table-row-background"]')
 
-        fights = []
-        fight_rows = response.css('ul[data-event-view-toggle-target="list"] > li[data-controller="table-row-background"]')
-
-        for fight in fight_rows:
-            fight_data = CardParser.parse_single_fight(fight, response)
-            fights.append(fight_data)
-
-        return fights
+        for fight in fights:
+            for item in CardParser.parse_single_fight(fight, response, event_id):
+                yield item
 
     @staticmethod
-    def parse_single_fight(fight, response):
+    def parse_single_fight(fight, response, event_id):
         fight_relative_url = fight.css('span.text-xs11 a::attr(href)').get()
         fight_id = URLUtil.extract_fight_id(fight_relative_url)
 
-        # Dövüşçü bilgilerini al
-        fighter1 = fight.css('div#f0smNameContainer a.link-primary-red::text').get(default='').strip()
-        fighter2 = fight.css('div#f1smNameContainer a.link-primary-red::text').get(default='').strip()
-        
+        # ---- Fighter bilgileri ----
+        fighter1_name = fight.css('div#f0smNameContainer a.link-primary-red::text').get(default='').strip()
+        fighter2_name = fight.css('div#f1smNameContainer a.link-primary-red::text').get(default='').strip()
+
         fighter1_relative_url = fight.css('div#f0smNameContainer a.link-primary-red::attr(href)').get(default='').strip()
         fighter2_relative_url = fight.css('div#f1smNameContainer a.link-primary-red::attr(href)').get(default='').strip()
-        
+
         fighter1_url = response.urljoin(fighter1_relative_url) if fighter1_relative_url else ''
         fighter2_url = response.urljoin(fighter2_relative_url) if fighter2_relative_url else ''
-        
+
         fighter1_id = URLUtil.extract_fighter_id(fighter1_url) if fighter1_url else None
         fighter2_id = URLUtil.extract_fighter_id(fighter2_url) if fighter2_url else None
-        
+
         fighter1_image_url = fight.css('div.relative.order-first img::attr(src)').get(default='').strip()
         fighter2_image_url = fight.css('div.relative.order-last img::attr(src)').get(default='').strip()
-        
+
+        # ---- Dövüş bilgileri ----
         weight_class = fight.css('span.bg-tap_darkgold::text').get(default='').strip()
         method = fight.css('span.uppercase::text').get(default='').strip()
         round_info = fight.css('span.text-xs11.md\:text-xs10.leading-relaxed::text').get(default='').strip()
 
+        # ---- Yaş bilgisi ----
         ages = fight.css('table#boutComparisonTable td.text-neutral-950::text').getall()
         ages = [age.strip() for age in ages if 'years' in age]
-        fighter1_age_at_fight_str = ages[0] if len(ages) > 0 else ''
-        fighter2_age_at_fight_str = ages[1] if len(ages) > 1 else ''
-        fighter1_age_at_fight = FighterAgeUtil.parse_fighter_age(fighter1_age_at_fight_str)
-        fighter2_age_at_fight = FighterAgeUtil.parse_fighter_age(fighter2_age_at_fight_str)
+        fighter1_age_at_fight = FighterAgeUtil.parse_fighter_age(ages[0]) if len(ages) > 0 else None
+        fighter2_age_at_fight = FighterAgeUtil.parse_fighter_age(ages[1]) if len(ages) > 1 else None
 
+        # ---- Kazanan ----
         fight_result = FightResultUtil.determine_fight_result(fight)
         winner_id = None
         if fight_result == 'win':
             winner_id = fighter1_id
 
-        return {
-            'fight_id': fight_id,
-            'fighter1': {
-                'name': fighter1,
-                'id': fighter1_id,
-                'age_at_fight': fighter1_age_at_fight,
-                'url': fighter1_url,
-                'image_url': fighter1_image_url,
-            },
-            'fighter2': {
-                'name': fighter2,
-                'id': fighter2_id,
-                'age_at_fight': fighter2_age_at_fight,
-                'url': fighter2_url,
-                'image_url': fighter2_image_url,
-            },
-            'fight_result': fight_result, 
-            'winner_id': winner_id,
-            'weight_class': weight_class,
-            'method': method,
-            'round_info': round_info,
-        }
+        # ---- Fight Item ----
+        fight_item = FightItem()
+        fight_item['fight_id'] = fight_id
+        fight_item['event_id'] = event_id
+        fight_item['weight_class'] = weight_class
+        fight_item['method'] = method
+        fight_item['round_info'] = round_info
+        fight_item['fight_result'] = fight_result
+        fight_item['winner_id'] = winner_id
+        yield fight_item
 
+        # ---- Fighter Item'lar ----
+        for id, name, url, img in [
+            (fighter1_id, fighter1_name, fighter1_url, fighter1_image_url),
+            (fighter2_id, fighter2_name, fighter2_url, fighter2_image_url)
+        ]:
+            fighter_item = FighterItem()
+            fighter_item['fighter_id'] = id
+            fighter_item['name'] = name
+            fighter_item['profile_url'] = url
+            fighter_item['image_url'] = img
+            yield fighter_item
+
+        # ---- FightParticipation (bağlantı tablosu) ----
+        for id, age, corner in [
+            (fighter1_id, fighter1_age_at_fight, "fighter1"),
+            (fighter2_id, fighter2_age_at_fight, "fighter2")
+        ]:
+            participation = FightParticipationItem()
+            participation['fight_id'] = fight_id
+            participation['fighter_id'] = id
+            participation['corner'] = corner
+            participation['age_at_fight'] = age
+            yield participation

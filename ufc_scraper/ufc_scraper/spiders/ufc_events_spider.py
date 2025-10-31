@@ -11,9 +11,9 @@ class UFCEventsSpider(scrapy.Spider):
     allowed_domains = ["tapology.com"]
 
     def start_requests(self):
-        url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page=1"
+        url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page=15"
         for item in self.fetch_or_load(url=url, callback=self.parse):
-            yield item  
+            yield item
 
     # cb_kwargs(callback keyword arguments) Callback fonksiyonuna gönderilecek ek bilgiler (varsayılan: None)
     def fetch_or_load(self, url, callback, cb_kwargs=None):
@@ -49,11 +49,13 @@ class UFCEventsSpider(scrapy.Spider):
 
     def parse_event(self, response, event_id):
         card_data = CardParser.parse_card(response)
-        fights_data = CardParser.parse_fights(response)
 
+        # --- Event verisi ---
         event_item = EventItem()
         event_item['event_id'] = event_id
         event_item.update(card_data)
-        event_item['fights'] = fights_data
+        yield event_item
 
-        yield event_item 
+        # --- Fight verilerini parse et ---
+        for fight_data in CardParser.parse_fights(response, event_id):
+            yield fight_data  # FightItem, FighterItem ve FightParticipationItem ayrı ayrı yield edilir

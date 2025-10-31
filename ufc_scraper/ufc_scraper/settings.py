@@ -65,8 +65,8 @@ ROBOTSTXT_OBEY = False
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'ufc_scraper.pipelines.PrettyJsonPipeline': 100,
-    'ufc_scraper.pipelines.SupabasePipeline': 300,
+    'ufc_scraper.pipelines.JsonExportPipeline': 100,
+    #'ufc_scraper.pipelines.SupabasePipeline': 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
