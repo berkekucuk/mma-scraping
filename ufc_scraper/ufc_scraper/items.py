@@ -48,7 +48,8 @@ class FighterItem(scrapy.Item):
 class FightParticipationItem(scrapy.Item):
     fight_id = scrapy.Field()          # FK -> FightItem
     fighter_id = scrapy.Field()        # FK -> FighterItem
-    corner = scrapy.Field()            # "Red" veya "Blue" (ya da fighter1/fighter2)
+    corner = scrapy.Field()
+    odds = scrapy.Field()           # "Red" veya "Blue" (ya da fighter1/fighter2)
     age_at_fight = scrapy.Field()
 
 

@@ -62,8 +62,21 @@ class CardParser:
         method = fight.css('span.uppercase::text').get(default='').strip()
         round_info = fight.css('span.text-xs11.md\:text-xs10.leading-relaxed::text').get(default='').strip()
 
+        table = fight.css('table#boutComparisonTable')
+
+        # ---- Oran bilgileri ---
+        odds_row = table.xpath(".//tr[td[contains(., 'Betting Odds')]]")
+        if odds_row:
+            odds_texts = odds_row.css('div.hidden.md\\:inline::text').getall()
+            odds_texts = [o.strip() for o in odds_texts if o.strip()]
+
+            fighter1_odds = odds_texts[0] if len(odds_texts) > 0 else None
+            fighter2_odds = odds_texts[-1] if len(odds_texts) > 1 else None
+        else:
+            fighter1_odds = fighter2_odds = None
+
         # ---- Yaş bilgisi ----
-        ages = fight.css('table#boutComparisonTable td.text-neutral-950::text').getall()
+        ages = table.css('td.text-neutral-950::text').getall()
         ages = [age.strip() for age in ages if 'years' in age]
         fighter1_age_at_fight = FighterAgeUtil.parse_fighter_age(ages[0]) if len(ages) > 0 else None
         fighter2_age_at_fight = FighterAgeUtil.parse_fighter_age(ages[1]) if len(ages) > 1 else None
@@ -98,13 +111,14 @@ class CardParser:
             yield fighter_item
 
         # ---- FightParticipation (bağlantı tablosu) ----
-        for id, age, corner in [
-            (fighter1_id, fighter1_age_at_fight, "fighter1"),
-            (fighter2_id, fighter2_age_at_fight, "fighter2")
+        for id, corner, odds, age in [
+            (fighter1_id, "fighter1", fighter1_odds, fighter1_age_at_fight),
+            (fighter2_id, "fighter2", fighter2_odds, fighter2_age_at_fight)
         ]:
             participation = FightParticipationItem()
             participation['fight_id'] = fight_id
             participation['fighter_id'] = id
             participation['corner'] = corner
+            participation['odds'] = odds
             participation['age_at_fight'] = age
             yield participation
