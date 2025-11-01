@@ -1,66 +1,55 @@
 import scrapy
-from ..services.html_cache_manager import HtmlCacheManager
-from ..services.fighter_cache_manager import FighterCacheManager
-from ..parsers.fighter_parser import FighterParser
+import json
 from ..items import FighterItem
+from ..parsers.fighter_parser import FighterParser
+from ..services.html_cache_manager import HtmlCacheManager
 
 class FighterSpider(scrapy.Spider):
     name = "fighter"
     allowed_domains = ["tapology.com"]
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Cache'i bir kez yükle, her request'te tekrar yüklemeyi önle
-        self.fighter_cache = FighterCacheManager.load_fighter_cache()
-        self.logger.info(f"Loaded {len(self.fighter_cache)} fighters from cache")
-    
+
     def start_requests(self):
-        """Cache dosyasından fighter URL'lerini okuyup request'leri oluşturur"""
-        if not self.fighter_cache:
-            self.logger.error("No fighters found in cache. Run ufc_events spider first!")
-            return
-        
-        for fighter_id, cached_fighter_info in self.fighter_cache.items():  
-            fighter_url = cached_fighter_info.get('url')  
-            if not fighter_url:
-                self.logger.warning(f"No URL found for fighter {fighter_id}")
-                continue
-                
+        # Fighter linklerini fighters.json'dan oku
+        # with open("data/json_output/fighters.json", "r", encoding="utf-8") as f:
+        #     fighters = json.load(f)
+
+        # for fighter in fighters:
+        #     url = fighter.get("profile_url")
+        #     fighter_id = fighter.get("fighter_id")
+        #     if url is not None:
+        #         for item in self.fetch_or_load(url, self.parse_fighter, cb_kwargs={"fighter_id": fighter_id}):
+        #             yield item
+                test_url = "https://www.tapology.com/fightcenter/fighters/119831-jack-della-maddalena"
+                fighter_id = "119831"  # veya ID sayısal ise "1425" gibi
+
+                yield from self.fetch_or_load(
+                    url=test_url,
+                    callback=self.parse_fighter,
+                    cb_kwargs={"fighter_id": fighter_id},
+                    )
+
+    def fetch_or_load(self, url, callback, cb_kwargs=None):
+        response = HtmlCacheManager.load_from_cache(url)
+        if response is not None:
+            for item in callback(response, **(cb_kwargs or {})):
+                yield item
+        else:
             yield scrapy.Request(
-                url=fighter_url,
-                callback=self.parse_fighter,
-                meta={'fighter_id': fighter_id},
-                errback=self.handle_error,
-                dont_filter=True
+                url=url,
+                callback=self.save_and_parse,
+                cb_kwargs={
+                    "original_callback": callback,
+                    "url": url,
+                    "cb_kwargs": cb_kwargs or {},
+                },
             )
-    
-    def parse_fighter(self, response):
-        """Fighter sayfasını parse eder"""
-        try:
-            parsed_fighter_info = FighterParser.parse_fighter(response)  
-            
-            if not parsed_fighter_info.get('name'):  
-                self.logger.warning(f"Fighter bilgisi bulunamadı: {response.url}")
-                return
-            
-            fighter_item = FighterItem()
-            fighter_id = response.meta.get('fighter_id')
-            
-            # Cache'den image_url bilgisini al
-            cached_fighter_info = self.fighter_cache.get(fighter_id, {})  
-            image_url = cached_fighter_info.get('image_url', '')  
-            
-            # Item'ı doldur
-            fighter_item['fighter_id'] = fighter_id
-            fighter_item['image_url'] = image_url
-            fighter_item.update(parsed_fighter_info)  
-            
-            self.logger.info(f"Successfully parsed fighter: {parsed_fighter_info.get('name')}")  
-            yield fighter_item
-            
-        except Exception as e:
-            self.logger.error(f"Error parsing fighter {response.url}: {str(e)}")
-    
-    def handle_error(self, failure):
-        """Request hatalarını handle eder"""
-        self.logger.error(f"Request failed for {failure.request.url}: {failure.value}")
+
+    def save_and_parse(self, response, original_callback, url, cb_kwargs):
+        HtmlCacheManager.save_to_cache(url, response)
+        for item in original_callback(response, **(cb_kwargs or {})):
+            yield item
+
+    def parse_fighter(self, response, fighter_id):
+        fighter_data = FighterParser.parse_fighter(response)
+        fighter_data["fighter_id"] = fighter_id
+        yield FighterItem(**fighter_data)

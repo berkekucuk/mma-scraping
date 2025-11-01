@@ -41,8 +41,8 @@ class FighterItem(scrapy.Item):
     height = scrapy.Field()
     weight_class = scrapy.Field()
     reach = scrapy.Field()
-    image_url = scrapy.Field()
     profile_url = scrapy.Field()
+    image_url = scrapy.Field()
 
 
 class FightParticipationItem(scrapy.Item):

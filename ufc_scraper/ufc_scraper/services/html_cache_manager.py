@@ -15,15 +15,27 @@ class HtmlCacheManager:
 
     @staticmethod
     def get_local_path(url):
-        filename = url.split("://")[-1].replace("/", "_").replace("?", "_").replace("=", "_")
-        return os.path.join("html_cache", f"{filename}.html")
+
+        if "/fighters" in url:
+            base_dir = os.path.join("html_cache", "fighters_cache")
+        else:
+            base_dir = os.path.join("html_cache", "events_cache")
+
+        filename = (
+            url.split("://")[-1]
+            .replace("/", "_")
+            .replace("?", "_")
+            .replace("=", "_")
+        )
+
+        return os.path.join(base_dir, f"{filename}.html")
 
     @staticmethod
     def save_to_cache(url, response):
         local_path = HtmlCacheManager.get_local_path(url)
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         with open(local_path, 'w', encoding='utf-8') as f:
-            f.write(response.text) 
+            f.write(response.text)
 
 
 
@@ -36,4 +48,3 @@ class HtmlCacheManager:
 
 
 
-            

@@ -1,88 +1,86 @@
-# Define your item pipelines here
-#
-# Don't forget to add your pipeline to the ITEM_PIPELINES setting
-# See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
 import json
+import logging
 from pathlib import Path
-from datetime import datetime
-
-
-class UfcScraperPipeline:
-    def process_item(self, item, spider):
-        return item
-
+from scrapy import Item
 
 class JsonExportPipeline:
-    """
-    Her item türünü (Event, Fight, Fighter, FightParticipation)
-    ayrı JSON dosyasına yazar.
-    FighterItem için duplicate (aynı fighter_id) kayıtları atlar.
-    """
 
     def __init__(self):
-        # JSON dosyalarının kaydedileceği klasör
         self.output_dir = Path("data/json_output")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Timestamp ekleyerek dosya adlarını benzersiz yap
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-        self.files = {
-            "EventItem": open(self.output_dir / f"events_{timestamp}.json", "w", encoding="utf-8"),
-            "FightItem": open(self.output_dir / f"fights_{timestamp}.json", "w", encoding="utf-8"),
-            "FighterItem": open(self.output_dir / f"fighters_{timestamp}.json", "w", encoding="utf-8"),
-            "FightParticipationItem": open(self.output_dir / f"participations_{timestamp}.json", "w", encoding="utf-8"),
+        self.data = {
+            "EventItem": {},
+            "FightItem": {},
+            "FighterItem": {},
+            "FightParticipationItem": {}
         }
 
-        # Her dosya için başlangıç köşeli parantezi yaz
-        for f in self.files.values():
-            f.write("[\n")
+        # JSON dosya yolları
+        self.file_paths = {
+            "EventItem": self.output_dir / "events.json",
+            "FightItem": self.output_dir / "fights.json",
+            "FighterItem": self.output_dir / "fighters.json",
+            "FightParticipationItem": self.output_dir / "participations.json",
+        }
 
-        # Item sayaçları (virgül ekleme kontrolü için)
-        self.item_counts = {key: 0 for key in self.files}
+    def open_spider(self, spider):
+        logging.info(f"[{spider.name}] JSON Pipeline başlatıldı.")
 
-        # Duplicate kontrolü için set
-        self.seen_fighter_ids = set()
+        # Var olan verileri yükle (duplicate kontrolü için)
+        for key, path in self.file_paths.items():
+            if path.exists():
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        existing_data = json.load(f)
+                        # id tabanlı dict oluştur
+                        if key == "EventItem":
+                            self.data[key] = {d["event_id"]: d for d in existing_data}
+                        elif key == "FightItem":
+                            self.data[key] = {d["fight_id"]: d for d in existing_data}
+                        elif key == "FighterItem":
+                            self.data[key] = {d["fighter_id"]: d for d in existing_data}
+                        elif key == "FightParticipationItem":
+                            self.data[key] = {f'{d["fight_id"]}-{d["fighter_id"]}': d for d in existing_data}
+                except json.JSONDecodeError:
+                    self.data[key] = {}
 
-    def process_item(self, item, spider):
-        """Her item geldiğinde doğru JSON dosyasına yaz."""
-        item_type = type(item).__name__
+    def process_item(self, item: Item, spider):
+        class_name = type(item).__name__
+        if class_name not in self.data:
+            return item  # ilgisiz item
 
-        # Desteklenmeyen item tipi varsa uyarı ver
-        if item_type not in self.files:
-            spider.logger.warning(f"Unknown item type: {item_type}")
+        if class_name == "EventItem":
+            key = item.get("event_id")
+        elif class_name == "FightItem":
+            key = item.get("fight_id")
+        elif class_name == "FighterItem":
+            key = item.get("fighter_id")
+        elif class_name == "FightParticipationItem":
+            key = f"{item.get('fight_id')}-{item.get('fighter_id')}"
+        else:
             return item
 
-        # ---- Duplicate kontrolü (FighterItem için) ----
-        if item_type == "FighterItem":
-            fighter_id = item.get("fighter_id")
-            if not fighter_id:
-                raise DropItem("Missing fighter_id field in FighterItem")
+        if not key:
+            spider.logger.warning(f"{class_name} item anahtar eksik: {dict(item)}")
+            return item
 
-            if fighter_id in self.seen_fighter_ids:
-                raise DropItem(f"Duplicate fighter ignored: {fighter_id}")
-
-            self.seen_fighter_ids.add(fighter_id)
-
-        # ---- JSON dosyasına yazım işlemi ----
-        file = self.files[item_type]
-
-        # Eğer bu dosyada daha önce bir item yazıldıysa araya virgül ekle
-        if self.item_counts[item_type] > 0:
-            file.write(",\n")
-
-        # JSON olarak yaz
-        json.dump(dict(item), file, ensure_ascii=False, indent=2)
-        self.item_counts[item_type] += 1
+        # Duplicate kontrolü
+        if key not in self.data[class_name]:
+            self.data[class_name][key] = dict(item)
 
         return item
 
     def close_spider(self, spider):
-        """Scrapy kapanırken dosyaları düzgün kapat."""
-        for name, file in self.files.items():
-            file.write("\n]\n")
-            file.close()
-            spider.logger.info(f"{name} JSON dosyası başarıyla kapatıldı.")
+        # Her tabloyu diske kaydet
+        for class_name, items_dict in self.data.items():
+            path = self.file_paths[class_name]
+            items_list = list(items_dict.values())
 
-        spider.logger.info("✅ JsonExportPipeline tamamlandı — tüm veriler kaydedildi.")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(items_list, f, indent=2, ensure_ascii=False)
+
+            logging.info(f"[{spider.name}] {path.name} başarıyla kaydedildi ({len(items_list)} kayıt).")
+
+        logging.info(f"[{spider.name}] ✅ JsonExportPipeline tamamlandı — tüm veriler güncellendi.")
