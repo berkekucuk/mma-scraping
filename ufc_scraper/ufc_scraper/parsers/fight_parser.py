@@ -34,7 +34,11 @@ class FightParser:
         fighter1_result = FightResultUtil.determine_fight_result(fighter1_div)
 
         fight_info_div = second_div.xpath('./div[2]')
-        weight_class = fight_info_div.css('span.bg-tap_darkgold::text').get(default='').strip()
+        fight_info_div_child1 = fight_info_div.xpath('./div[1]')
+        weight_class = fight_info_div_child1.css('span.bg-tap_darkgold::text').get(default='').strip()
+
+        fight_info_div_child2 = fight_info_div.xpath('./div[2]')
+        fight_number = fight_info_div_child2.xpath('.//span[2]/text()').get(default='').strip()
 
         fighter2_div = second_div.xpath('./div[3]')
         fighter2_name = fighter2_div.css('a.link-primary-red::text').get(default='').strip()
@@ -46,7 +50,7 @@ class FightParser:
 
         #####################################################################################################################
         third_div = web_view.xpath('./div[3]')
-        fight_relative_url = third_div.css('a::attr(href)').get()
+        fight_relative_url = third_div.css('a::attr(href)').get(default='').strip()
         fight_id = URLUtil.extract_fight_id(fight_relative_url)
 
         table = third_div.css('table#boutComparisonTable')
@@ -74,6 +78,7 @@ class FightParser:
         fight_item['weight_class'] = weight_class
         fight_item['method'] = method
         fight_item['round_info'] = round_info
+        fight_item['fight_number'] = fight_number
         yield fight_item
 
         # ---- Fighter Item'lar ----

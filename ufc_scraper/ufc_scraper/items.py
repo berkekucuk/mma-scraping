@@ -12,7 +12,8 @@ class UfcScraperItem(scrapy.Item):
     pass
 
 class EventItem(scrapy.Item):
-    event_id = scrapy.Field()          # PK
+    event_id = scrapy.Field()  # PK
+    event_url = scrapy.Field()
     event_type = scrapy.Field()
     event_name = scrapy.Field()
     date_time = scrapy.Field()
@@ -26,6 +27,7 @@ class FightItem(scrapy.Item):
     weight_class = scrapy.Field()
     method = scrapy.Field()
     round_info = scrapy.Field()
+    fight_number = scrapy.Field()
 
 
 class FighterItem(scrapy.Item):

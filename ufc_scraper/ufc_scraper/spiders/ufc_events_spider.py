@@ -11,7 +11,7 @@ class UFCEventsSpider(scrapy.Spider):
     allowed_domains = ["tapology.com"]
 
     def start_requests(self):
-        url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page=15"
+        url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page=2"
         for item in self.fetch_or_load(url=url, callback=self.parse):
             yield item
 
@@ -48,19 +48,20 @@ class UFCEventsSpider(scrapy.Spider):
     def parse(self, response):
         events = response.css('div.flex.flex-col.border-b.border-solid.border-neutral-700')
         for event in events:
-            relative_url = event.css('div.promotion a::attr(href)').get(default='')
-            if relative_url is not None:
-                url = response.urljoin(relative_url)
-                event_id = URLUtil.extract_event_id(relative_url)
-                for item in self.fetch_or_load(url=url, callback=self.parse_event, cb_kwargs={'event_id': event_id}):
+            event_relative_url = event.css('div.promotion a::attr(href)').get(default='')
+            if event_relative_url is not None:
+                event_url = response.urljoin(event_relative_url)
+                event_id = URLUtil.extract_event_id(event_relative_url)
+                for item in self.fetch_or_load(url=event_url, callback=self.parse_event, cb_kwargs={'event_id': event_id, 'event_url': event_url}):
                     yield item
 
-    def parse_event(self, response, event_id):
+    def parse_event(self, response, event_id, event_url):
         card_data = CardParser.parse_card(response)
 
         # --- Event verisi ---
         event_item = EventItem()
         event_item['event_id'] = event_id
+        event_item['event_url'] = event_url
         event_item.update(card_data)
         yield event_item
 
