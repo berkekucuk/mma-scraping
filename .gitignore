@@ -231,6 +231,8 @@ $RECYCLE.BIN/
 # Project specific files
 # Cache files
 html_cache/
+html_cache/1/
+html_cache2/
 *.json
 
 # Supabase
@@ -247,6 +249,9 @@ tmp/
 # Output files
 output/
 data/
+data1/
+data2/
+
 
 # Configuration files with sensitive data
 config.ini

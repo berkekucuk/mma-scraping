@@ -15,6 +15,14 @@ class UFCEventsSpider(scrapy.Spider):
         for item in self.fetch_or_load(url=url, callback=self.parse):
             yield item
 
+    # def start_requests(self):
+    #     base_url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page="
+
+    #     for page_num in range(2, 32):  # 2’den 31’e kadar (31 dahil)
+    #         url = f"{base_url}{page_num}"
+    #         for item in self.fetch_or_load(url=url, callback=self.parse):
+    #             yield item
+
     # cb_kwargs(callback keyword arguments) Callback fonksiyonuna gönderilecek ek bilgiler (varsayılan: None)
     def fetch_or_load(self, url, callback, cb_kwargs=None):
         response = HtmlCacheManager.load_from_cache(url)

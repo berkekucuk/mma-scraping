@@ -38,33 +38,45 @@ class CardParser:
 
     @staticmethod
     def parse_single_fight(fight, response, event_id):
-        fight_relative_url = fight.css('span.text-xs11 a::attr(href)').get()
+        web_view = fight.xpath('./div[1]')
+
+        #####################################################################################################################
+        first_div = web_view.xpath('./div[1]')
+        method = first_div.css('span.uppercase::text').get(default='').strip()
+        round_info = first_div.css('span.text-xs11.md\:text-xs10.leading-relaxed::text').get(default='').strip()
+
+        #####################################################################################################################
+        second_div = web_view.xpath('./div[2]')
+
+        fighter1_div = second_div.xpath('./div[1]')
+        fighter1_name = fighter1_div.css('a.link-primary-red::text').get(default='').strip()
+        fighter1_relative_url = fighter1_div.css('a.link-primary-red::attr(href)').get(default='').strip()
+        fighter1_url = response.urljoin(fighter1_relative_url) if fighter1_relative_url else ''
+        fighter1_id = URLUtil.extract_fighter_id(fighter1_url) if fighter1_url else None
+        fighter1_image_url = fighter1_div.css('div.relative.order-first img::attr(src)').get(default='').strip()
+        fight_result = FightResultUtil.determine_fight_result(fighter1_div)
+        winner_id = None
+        if fight_result == 'win':
+            winner_id = fighter1_id
+
+
+        fight_info_div = second_div.xpath('./div[2]')
+        weight_class = fight_info_div.css('span.bg-tap_darkgold::text').get(default='').strip()
+
+        fighter2_div = second_div.xpath('./div[3]')
+        fighter2_name = fighter2_div.css('a.link-primary-red::text').get(default='').strip()
+        fighter2_relative_url = fighter2_div.css('a.link-primary-red::attr(href)').get(default='').strip()
+        fighter2_url = response.urljoin(fighter2_relative_url) if fighter2_relative_url else ''
+        fighter2_id = URLUtil.extract_fighter_id(fighter2_url) if fighter2_url else None
+        fighter2_image_url = fighter2_div.css('div.relative.order-last img::attr(src)').get(default='').strip()
+
+        #####################################################################################################################
+        third_div = web_view.xpath('./div[3]')
+        fight_relative_url = third_div.css('a::attr(href)').get()
         fight_id = URLUtil.extract_fight_id(fight_relative_url)
 
-        # ---- Fighter bilgileri ----
-        fighter1_name = fight.css('div#f0smNameContainer a.link-primary-red::text').get(default='').strip()
-        fighter2_name = fight.css('div#f1smNameContainer a.link-primary-red::text').get(default='').strip()
+        table = third_div.css('table#boutComparisonTable')
 
-        fighter1_relative_url = fight.css('div#f0smNameContainer a.link-primary-red::attr(href)').get(default='').strip()
-        fighter2_relative_url = fight.css('div#f1smNameContainer a.link-primary-red::attr(href)').get(default='').strip()
-
-        fighter1_url = response.urljoin(fighter1_relative_url) if fighter1_relative_url else ''
-        fighter2_url = response.urljoin(fighter2_relative_url) if fighter2_relative_url else ''
-
-        fighter1_id = URLUtil.extract_fighter_id(fighter1_url) if fighter1_url else None
-        fighter2_id = URLUtil.extract_fighter_id(fighter2_url) if fighter2_url else None
-
-        fighter1_image_url = fight.css('div.relative.order-first img::attr(src)').get(default='').strip()
-        fighter2_image_url = fight.css('div.relative.order-last img::attr(src)').get(default='').strip()
-
-        # ---- Dövüş bilgileri ----
-        weight_class = fight.css('span.bg-tap_darkgold::text').get(default='').strip()
-        method = fight.css('span.uppercase::text').get(default='').strip()
-        round_info = fight.css('span.text-xs11.md\:text-xs10.leading-relaxed::text').get(default='').strip()
-
-        table = fight.css('table#boutComparisonTable')
-
-        # ---- Oran bilgileri ---
         odds_row = table.xpath(".//tr[td[contains(., 'Betting Odds')]]")
         if odds_row:
             odds_texts = odds_row.css('div.hidden.md\\:inline::text').getall()
@@ -75,18 +87,12 @@ class CardParser:
         else:
             fighter1_odds = fighter2_odds = None
 
-        # ---- Yaş bilgisi ----
         ages = table.css('td.text-neutral-950::text').getall()
         ages = [age.strip() for age in ages if 'years' in age]
         fighter1_age_at_fight = FighterAgeUtil.parse_fighter_age(ages[0]) if len(ages) > 0 else None
         fighter2_age_at_fight = FighterAgeUtil.parse_fighter_age(ages[1]) if len(ages) > 1 else None
 
-        # ---- Kazanan ----
-        fight_result = FightResultUtil.determine_fight_result(fight)
-        winner_id = None
-        if fight_result == 'win':
-            winner_id = fighter1_id
-
+        #####################################################################################################################
         # ---- Fight Item ----
         fight_item = FightItem()
         fight_item['fight_id'] = fight_id
