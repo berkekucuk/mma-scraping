@@ -24,10 +24,13 @@ class EventItem(scrapy.Item):
 class FightItem(scrapy.Item):
     fight_id = scrapy.Field()          # PK
     event_id = scrapy.Field()          # FK -> EventItem
-    weight_class = scrapy.Field()
-    method = scrapy.Field()
-    round_info = scrapy.Field()
-    fight_number = scrapy.Field()
+    method_type = scrapy.Field()
+    method_detail = scrapy.Field()
+    round_summary = scrapy.Field()
+    card_section = scrapy.Field()
+    weight_class_lbs = scrapy.Field()
+    rounds_format = scrapy.Field()
+    card_number = scrapy.Field()
 
 
 class FighterItem(scrapy.Item):

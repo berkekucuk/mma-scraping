@@ -1,6 +1,7 @@
 from ..utils.fighter_age_util import FighterAgeUtil
 from ..utils.url_util import URLUtil
 from ..utils.fight_result_util import FightResultUtil
+from ..utils.method_util import MethodUtil
 from ..items import FightItem, FightParticipationItem, FighterItem
 
 class FightParser:
@@ -19,8 +20,11 @@ class FightParser:
 
         #####################################################################################################################
         first_div = web_view.xpath('./div[1]')
-        method = first_div.css('span.uppercase::text').get(default='').strip()
-        round_info = first_div.css('span.text-xs11.md\:text-xs10.leading-relaxed::text').get(default='').strip()
+        method_str = first_div.css('span.uppercase::text').get(default='').strip()
+        method_parsed = MethodUtil.split_method(method_str)
+        method_type = method_parsed["method_type"]
+        method_detail = method_parsed["method_detail"]
+        round_summary = first_div.css('span.text-xs11.md\:text-xs10.leading-relaxed::text').get(default='').strip()
 
         #####################################################################################################################
         second_div = web_view.xpath('./div[2]')
@@ -33,12 +37,15 @@ class FightParser:
         fighter1_image_url = fighter1_div.css('div.relative.order-first img::attr(src)').get(default='').strip()
         fighter1_result = FightResultUtil.determine_fight_result(fighter1_div)
 
-        fight_info_div = second_div.xpath('./div[2]')
-        fight_info_div_child1 = fight_info_div.xpath('./div[1]')
-        weight_class = fight_info_div_child1.css('span.bg-tap_darkgold::text').get(default='').strip()
+        middle_div = second_div.xpath('./div[2]')
+        box_div = middle_div.xpath('./div[1]')
 
-        fight_info_div_child2 = fight_info_div.xpath('./div[2]')
-        fight_number = fight_info_div_child2.xpath('.//span[2]/text()').get(default='').strip()
+        card_section = box_div.xpath('./span[1]/a/text()').get(default='').strip()
+        weight_class_lbs = box_div.xpath('./div[1]/span/text()').get(default='').strip()
+        rounds_format = box_div.xpath('./div[2]/text()').get(default='').strip()
+
+        bout_details_div = middle_div.xpath('./div[2]')
+        card_number = bout_details_div.xpath('.//span[2]/text()').get(default='').strip()
 
         fighter2_div = second_div.xpath('./div[3]')
         fighter2_name = fighter2_div.css('a.link-primary-red::text').get(default='').strip()
@@ -75,10 +82,13 @@ class FightParser:
         fight_item = FightItem()
         fight_item['fight_id'] = fight_id
         fight_item['event_id'] = event_id
-        fight_item['weight_class'] = weight_class
-        fight_item['method'] = method
-        fight_item['round_info'] = round_info
-        fight_item['fight_number'] = fight_number
+        fight_item['method_type'] = method_type
+        fight_item['method_detail'] = method_detail
+        fight_item['round_summary'] = round_summary
+        fight_item['card_section'] = card_section
+        fight_item['weight_class_lbs'] = weight_class_lbs
+        fight_item['rounds_format'] = rounds_format
+        fight_item['card_number'] = card_number
         yield fight_item
 
         # ---- Fighter Item'lar ----
