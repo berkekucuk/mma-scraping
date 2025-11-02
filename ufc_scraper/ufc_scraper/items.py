@@ -14,9 +14,9 @@ class UfcScraperItem(scrapy.Item):
 class EventItem(scrapy.Item):
     event_id = scrapy.Field()  # PK
     event_url = scrapy.Field()
-    event_type = scrapy.Field()
+    status = scrapy.Field()
     event_name = scrapy.Field()
-    date_time = scrapy.Field()
+    datetime_utc = scrapy.Field()
     venue = scrapy.Field()
     location = scrapy.Field()
 
@@ -42,7 +42,7 @@ class FighterItem(scrapy.Item):
     born = scrapy.Field()
     fighting_out_of = scrapy.Field()
     height = scrapy.Field()
-    weight_class = scrapy.Field()
+    weight_class_name = scrapy.Field()
     reach = scrapy.Field()
     profile_url = scrapy.Field()
     image_url = scrapy.Field()
@@ -51,8 +51,9 @@ class FighterItem(scrapy.Item):
 class FightParticipationItem(scrapy.Item):
     fight_id = scrapy.Field()          # FK -> FightItem
     fighter_id = scrapy.Field()        # FK -> FighterItem
-    odds = scrapy.Field()
+    odds_value = scrapy.Field()
+    odds_label = scrapy.Field()
     age_at_fight = scrapy.Field()
-    fight_result = scrapy.Field()
+    result = scrapy.Field()
 
 

@@ -2,7 +2,9 @@ from ..utils.fighter_age_util import FighterAgeUtil
 from ..utils.url_util import URLUtil
 from ..utils.fight_result_util import FightResultUtil
 from ..utils.method_util import MethodUtil
+from ..utils.odds_util import OddsUtil
 from ..items import FightItem, FightParticipationItem, FighterItem
+import scrapy
 
 class FightParser:
 
@@ -24,7 +26,7 @@ class FightParser:
         method_parsed = MethodUtil.split_method(method_str)
         method_type = method_parsed["method_type"]
         method_detail = method_parsed["method_detail"]
-        round_summary = first_div.css('span.text-xs11.md\:text-xs10.leading-relaxed::text').get(default='').strip()
+        round_summary = first_div.css(r'span.text-xs11.md\:text-xs10.leading-relaxed::text').get(default='').strip()
 
         #####################################################################################################################
         second_div = web_view.xpath('./div[2]')
@@ -62,15 +64,28 @@ class FightParser:
 
         table = third_div.css('table#boutComparisonTable')
 
-        odds_row = table.xpath(".//tr[td[contains(., 'Betting Odds')]]")
+        odds_row = table.xpath(".//tr[td[contains(., 'Betting Odds')]]").get()
+
         if odds_row:
-            odds_texts = odds_row.css('div.hidden.md\\:inline::text').getall()
+            row_sel = scrapy.Selector(text=odds_row)
+            odds_texts = row_sel.css('div.hidden.md\\:inline::text').getall()
             odds_texts = [o.strip() for o in odds_texts if o.strip()]
 
             fighter1_odds = odds_texts[0] if len(odds_texts) > 0 else None
-            fighter2_odds = odds_texts[-1] if len(odds_texts) > 1 else None
+            fighter2_odds = odds_texts[1] if len(odds_texts) > 1 else None
+
+            # OddsUtil yardımıyla ayrıştır
+            f1_parsed = OddsUtil.split_odds(fighter1_odds)
+            f2_parsed = OddsUtil.split_odds(fighter2_odds)
+
+            fighter1_odds_value = f1_parsed["odds_value"]
+            fighter1_odds_label = f1_parsed["odds_label"]
+            fighter2_odds_value = f2_parsed["odds_value"]
+            fighter2_odds_label = f2_parsed["odds_label"]
+
         else:
-            fighter1_odds = fighter2_odds = None
+            fighter1_odds_value = fighter1_odds_label = None
+            fighter2_odds_value = fighter2_odds_label = None
 
         ages = table.css('td.text-neutral-950::text').getall()
         ages = [age.strip() for age in ages if 'years' in age]
@@ -104,14 +119,15 @@ class FightParser:
             yield fighter_item
 
         # ---- FightParticipation (bağlantı tablosu) ----
-        for id, odds, age, result in [
-            (fighter1_id, fighter1_odds, fighter1_age_at_fight, fighter1_result),
-            (fighter2_id, fighter2_odds, fighter2_age_at_fight, fighter2_result)
+        for id, odds_value, odds_label, age, result in [
+            (fighter1_id, fighter1_odds_value, fighter1_odds_label, fighter1_age_at_fight, fighter1_result),
+            (fighter2_id, fighter2_odds_value, fighter2_odds_label, fighter2_age_at_fight, fighter2_result)
         ]:
             participation = FightParticipationItem()
             participation['fight_id'] = fight_id
             participation['fighter_id'] = id
-            participation['odds'] = odds
+            participation['odds_value'] = odds_value
+            participation['odds_label'] = odds_label
             participation['age_at_fight'] = age
-            participation['fight_result'] = result
+            participation['result'] = result
             yield participation
