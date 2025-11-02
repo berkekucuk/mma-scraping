@@ -54,11 +54,7 @@ class CardParser:
         fighter1_url = response.urljoin(fighter1_relative_url) if fighter1_relative_url else ''
         fighter1_id = URLUtil.extract_fighter_id(fighter1_url) if fighter1_url else None
         fighter1_image_url = fighter1_div.css('div.relative.order-first img::attr(src)').get(default='').strip()
-        fight_result = FightResultUtil.determine_fight_result(fighter1_div)
-        winner_id = None
-        if fight_result == 'win':
-            winner_id = fighter1_id
-
+        fighter1_result = FightResultUtil.determine_fight_result(fighter1_div)
 
         fight_info_div = second_div.xpath('./div[2]')
         weight_class = fight_info_div.css('span.bg-tap_darkgold::text').get(default='').strip()
@@ -69,6 +65,7 @@ class CardParser:
         fighter2_url = response.urljoin(fighter2_relative_url) if fighter2_relative_url else ''
         fighter2_id = URLUtil.extract_fighter_id(fighter2_url) if fighter2_url else None
         fighter2_image_url = fighter2_div.css('div.relative.order-last img::attr(src)').get(default='').strip()
+        fighter2_result = FightResultUtil.determine_fight_result(fighter2_div)
 
         #####################################################################################################################
         third_div = web_view.xpath('./div[3]')
@@ -100,8 +97,6 @@ class CardParser:
         fight_item['weight_class'] = weight_class
         fight_item['method'] = method
         fight_item['round_info'] = round_info
-        fight_item['fight_result'] = fight_result
-        fight_item['winner_id'] = winner_id
         yield fight_item
 
         # ---- Fighter Item'lar ----
@@ -117,14 +112,14 @@ class CardParser:
             yield fighter_item
 
         # ---- FightParticipation (bağlantı tablosu) ----
-        for id, corner, odds, age in [
-            (fighter1_id, "fighter1", fighter1_odds, fighter1_age_at_fight),
-            (fighter2_id, "fighter2", fighter2_odds, fighter2_age_at_fight)
+        for id, odds, age, result in [
+            (fighter1_id, fighter1_odds, fighter1_age_at_fight, fighter1_result),
+            (fighter2_id, fighter2_odds, fighter2_age_at_fight, fighter2_result)
         ]:
             participation = FightParticipationItem()
             participation['fight_id'] = fight_id
             participation['fighter_id'] = id
-            participation['corner'] = corner
             participation['odds'] = odds
             participation['age_at_fight'] = age
+            participation['fight_result'] = result
             yield participation

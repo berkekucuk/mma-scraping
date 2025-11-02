@@ -26,8 +26,6 @@ class FightItem(scrapy.Item):
     weight_class = scrapy.Field()
     method = scrapy.Field()
     round_info = scrapy.Field()
-    fight_result = scrapy.Field()
-    winner_id = scrapy.Field()         # FK -> FighterItem
 
 
 class FighterItem(scrapy.Item):
@@ -48,8 +46,8 @@ class FighterItem(scrapy.Item):
 class FightParticipationItem(scrapy.Item):
     fight_id = scrapy.Field()          # FK -> FightItem
     fighter_id = scrapy.Field()        # FK -> FighterItem
-    corner = scrapy.Field()
-    odds = scrapy.Field()           # "Red" veya "Blue" (ya da fighter1/fighter2)
+    odds = scrapy.Field()
     age_at_fight = scrapy.Field()
+    fight_result = scrapy.Field()
 
 
