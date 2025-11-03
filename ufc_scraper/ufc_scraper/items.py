@@ -5,17 +5,11 @@
 
 import scrapy
 
-
-class UfcScraperItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
-
 class EventItem(scrapy.Item):
     event_id = scrapy.Field()  # PK
     event_url = scrapy.Field()
     status = scrapy.Field()
-    event_name = scrapy.Field()
+    name = scrapy.Field()
     datetime_utc = scrapy.Field()
     venue = scrapy.Field()
     location = scrapy.Field()
@@ -27,10 +21,10 @@ class FightItem(scrapy.Item):
     method_type = scrapy.Field()
     method_detail = scrapy.Field()
     round_summary = scrapy.Field()
-    card_section = scrapy.Field()
+    bout_type = scrapy.Field()
     weight_class_lbs = scrapy.Field()
     rounds_format = scrapy.Field()
-    card_number = scrapy.Field()
+    fight_order = scrapy.Field()
 
 
 class FighterItem(scrapy.Item):

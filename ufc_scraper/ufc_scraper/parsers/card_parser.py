@@ -5,7 +5,8 @@ class CardParser:
     @staticmethod
     def parse_card(response):
         status = response.css('div#eventPageHeader span::text').get(default='').strip()
-        event_name = response.css('h2::text').get(default='').strip()
+
+        name = response.css('h2::text').get(default='').strip()
 
         container = response.css('ul[data-controller="unordered-list-background"]')
 
@@ -18,7 +19,7 @@ class CardParser:
 
         return {
             'status': status,
-            'event_name': event_name,
+            'name': name,
             'datetime_utc': datetime_utc,
             'venue': venue,
             'location': location,

@@ -2,7 +2,7 @@ import scrapy
 from ..services.html_cache_manager import HtmlCacheManager
 from ..utils.url_util import URLUtil
 from ..parsers.card_parser import CardParser
-from ..parsers.fight_parser import FightParser
+from ..parsers.completed_fight_parser import CompletedFightParser
 from ..parsers.upcoming_fight_parser import UpcomingFightParser
 from ..items import EventItem
 
@@ -70,5 +70,5 @@ class UFCEventsSpider(scrapy.Spider):
             for fight_data in UpcomingFightParser.parse_fights(response, event_id):
                 yield fight_data
         else:
-            for fight_data in FightParser.parse_fights(response, event_id):
+            for fight_data in CompletedFightParser.parse_fights(response, event_id):
                 yield fight_data
