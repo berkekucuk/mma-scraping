@@ -3,6 +3,7 @@ from ..services.html_cache_manager import HtmlCacheManager
 from ..utils.url_util import URLUtil
 from ..parsers.card_parser import CardParser
 from ..parsers.fight_parser import FightParser
+from ..parsers.upcoming_fight_parser import UpcomingFightParser
 from ..items import EventItem
 
 class UFCEventsSpider(scrapy.Spider):
@@ -11,7 +12,7 @@ class UFCEventsSpider(scrapy.Spider):
     allowed_domains = ["tapology.com"]
 
     def start_requests(self):
-        url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page=2"
+        url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page=1"
         for item in self.fetch_or_load(url=url, callback=self.parse):
             yield item
 
@@ -65,6 +66,9 @@ class UFCEventsSpider(scrapy.Spider):
         event_item.update(card_data)
         yield event_item
 
-        # --- Fight verilerini parse et ---
-        for fight_data in FightParser.parse_fights(response, event_id):
-            yield fight_data  # FightItem, FighterItem ve FightParticipationItem ayrı ayrı yield edilir
+        if card_data.get('status') == "Upcoming":
+            for fight_data in UpcomingFightParser.parse_fights(response, event_id):
+                yield fight_data
+        else:
+            for fight_data in FightParser.parse_fights(response, event_id):
+                yield fight_data

@@ -1,19 +1,19 @@
-from ..utils.fighter_age_util import FighterAgeUtil
-from ..utils.url_util import URLUtil
-from ..utils.fight_result_util import FightResultUtil
-from ..utils.method_util import MethodUtil
-from ..utils.odds_util import OddsUtil
-from ..items import FightItem, FightParticipationItem, FighterItem
-import scrapy
 
-class FightParser:
+import scrapy
+from ..items import FightItem, FightParticipationItem, FighterItem
+from ..utils.fighter_age_util import FighterAgeUtil
+from ..utils.odds_util import OddsUtil
+from ..utils.url_util import URLUtil
+
+
+class UpcomingFightParser:
 
     @staticmethod
     def parse_fights(response, event_id):
         fights = response.css('ul[data-event-view-toggle-target="list"] > li[data-controller="table-row-background"]')
 
         for fight in fights:
-            for item in FightParser.parse_single_fight(fight, response, event_id):
+            for item in UpcomingFightParser.parse_single_fight(fight, response, event_id):
                 yield item
 
     @staticmethod
@@ -21,15 +21,7 @@ class FightParser:
         web_view = fight.xpath('./div[1]')
 
         #####################################################################################################################
-        fight_summary_div = web_view.xpath('./div[1]')
-        method_str = fight_summary_div.css('span.uppercase::text').get(default='').strip()
-        method_parsed = MethodUtil.split_method(method_str)
-        method_type = method_parsed["method_type"]
-        method_detail = method_parsed["method_detail"]
-        round_summary = fight_summary_div.css(r'span.text-xs11.md\:text-xs10.leading-relaxed::text').get(default='').strip()
-
-        #####################################################################################################################
-        fight_participants_div = web_view.xpath('./div[2]')
+        fight_participants_div = web_view.xpath('./div[1]')
 
         fighter1_div = fight_participants_div.xpath('./div[1]')
         middle_div = fight_participants_div.xpath('./div[2]')
@@ -42,7 +34,6 @@ class FightParser:
         fighter1_url = response.urljoin(fighter1_relative_url) if fighter1_relative_url else ''
         fighter1_id = URLUtil.extract_fighter_id(fighter1_url) if fighter1_url else None
         fighter1_image_url = fighter1_div.css('div.relative.order-first img::attr(src)').get(default='').strip()
-        fighter1_result = FightResultUtil.determine_fight_result(fighter1_div)
 
         card_section = box_div.xpath('./span[1]/a/text()').get(default='').strip()
         fight_relative_url = box_div.xpath('./span[1]/a/@href').get(default='').strip()
@@ -56,10 +47,10 @@ class FightParser:
         fighter2_url = response.urljoin(fighter2_relative_url) if fighter2_relative_url else ''
         fighter2_id = URLUtil.extract_fighter_id(fighter2_url) if fighter2_url else None
         fighter2_image_url = fighter2_div.css('div.relative.order-last img::attr(src)').get(default='').strip()
-        fighter2_result = FightResultUtil.determine_fight_result(fighter2_div)
 
         #####################################################################################################################
-        bout_details_div = web_view.xpath('./div[3]')
+
+        bout_details_div = web_view.xpath('./div[2]')
 
         table = bout_details_div.css('table#boutComparisonTable')
         odds_row = table.xpath(".//tr[td[contains(., 'Betting Odds')]]").get()
@@ -91,13 +82,14 @@ class FightParser:
         fighter2_age_at_fight = FighterAgeUtil.parse_fighter_age(ages[1]) if len(ages) > 1 else None
 
         #####################################################################################################################
+
         # ---- Fight Item ----
         fight_item = FightItem()
         fight_item['fight_id'] = fight_id
         fight_item['event_id'] = event_id
-        fight_item['method_type'] = method_type
-        fight_item['method_detail'] = method_detail
-        fight_item['round_summary'] = round_summary
+        fight_item['method_type'] = ""
+        fight_item['method_detail'] = ""
+        fight_item['round_summary'] = ""
         fight_item['card_section'] = card_section
         fight_item['weight_class_lbs'] = weight_class_lbs
         fight_item['rounds_format'] = rounds_format
@@ -118,8 +110,8 @@ class FightParser:
 
         # ---- FightParticipation (bağlantı tablosu) ----
         for id, odds_value, odds_label, age, result in [
-            (fighter1_id, fighter1_odds_value, fighter1_odds_label, fighter1_age_at_fight, fighter1_result),
-            (fighter2_id, fighter2_odds_value, fighter2_odds_label, fighter2_age_at_fight, fighter2_result)
+            (fighter1_id, fighter1_odds_value, fighter1_odds_label, fighter1_age_at_fight, "pending"),
+            (fighter2_id, fighter2_odds_value, fighter2_odds_label, fighter2_age_at_fight, "pending")
         ]:
             participation = FightParticipationItem()
             participation['fight_id'] = fight_id
