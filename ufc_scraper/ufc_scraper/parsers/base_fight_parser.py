@@ -85,6 +85,72 @@ class BaseFightParser:
         }
 
     @staticmethod
+    def parse_cancelled_fight(cancelled_fight_div, response):
+        # Sol dövüşçü
+        fighter1_name =  cancelled_fight_div.xpath('.//div[@id="leftNdesktop"]//a/text()').get()
+        fighter1_relative_url = cancelled_fight_div.xpath('.//div[@id="leftNdesktop"]//a/@href').get()
+        fighter1_profile_url = response.urljoin(fighter1_relative_url) if fighter1_relative_url else ''
+        fighter1_id = URLUtil.extract_fighter_id(fighter1_relative_url) if fighter1_relative_url else None
+        fighter1_img = cancelled_fight_div.xpath('.//div[1]//img/@src').get()
+
+        # Sağ dövüşçü
+        fighter2_name = cancelled_fight_div.xpath('.//div[@id="rightNdesktop"]//a/text()').get()
+        fighter2_relative_url = cancelled_fight_div.xpath('.//div[@id="rightNdesktop"]//a/@href').get()
+        fighter2_profile_url = response.urljoin(fighter2_relative_url) if fighter2_relative_url else ''
+        fighter2_id = URLUtil.extract_fighter_id(fighter2_relative_url) if fighter2_relative_url else None
+        fighter2_img = cancelled_fight_div.xpath('.//div[@id="rightNdesktop"]/following-sibling::div//img/@src').get()
+
+        # Orta kısım: durum ve cancelled bilgisi
+        middle_div = cancelled_fight_div.xpath('.//div[@data-controller="tooltip"]')
+        status_text = middle_div.xpath('.//a/text()').get()
+        status_reason = middle_div.xpath('.//span[contains(@class, "text-sm")]/text()').get()
+        fight_relative_url = middle_div.xpath('.//a/@href').get()
+        fight_id = URLUtil.extract_fight_id(fight_relative_url) if fight_relative_url else None
+
+        return {
+            'fighter1_data': {
+                'fighter_id': fighter1_id,
+                'name': fighter1_name,
+                'profile_url': fighter1_profile_url,
+                'image_url': fighter1_img
+            },
+            'fighter2_data': {
+                'fighter_id': fighter2_id,
+                'name': fighter2_name,
+                'profile_url': fighter2_profile_url,
+                'image_url': fighter2_img
+                },
+            'fight_data': {
+                'status_text': status_text,
+                'status_reason': status_reason,
+                'fight_id': fight_id
+                }
+            }
+
+    @staticmethod
+    def handle_cancelled_fight(cancelled_fight_div, response, event_id):
+        cancelled_fight_data = BaseFightParser.parse_cancelled_fight(cancelled_fight_div, response)
+
+        fighter1_data = cancelled_fight_data['fighter1_data']
+        fighter2_data = cancelled_fight_data['fighter2_data']
+        details = cancelled_fight_data['fight_data']
+
+        fight_data = {
+            'fight_id': details['fight_id']
+        }
+
+        # FightItem oluştur
+        yield BaseFightParser.create_fight_item(fight_data, event_id, method_type=details['status_text'], method_detail=details['status_reason'])
+
+        # FighterItem'ları oluştur
+        for fighter_item in BaseFightParser.create_fighter_items(fighter1_data, fighter2_data):
+            yield fighter_item
+
+        for participation_item in BaseFightParser.create_participation_items(fight_data['fight_id'], fighter1_data, fighter2_data, result1=details['status_text'], result2=details['status_text']):
+            yield participation_item
+
+
+    @staticmethod
     def create_fight_item(fight_data, event_id, method_type="", method_detail="", round_summary=""):
 
         fight_item = FightItem()
@@ -93,9 +159,9 @@ class BaseFightParser:
         fight_item['method_type'] = method_type
         fight_item['method_detail'] = method_detail
         fight_item['round_summary'] = round_summary
-        fight_item['bout_type'] = fight_data['bout_type']
-        fight_item['weight_class_lbs'] = fight_data['weight_class_lbs']
-        fight_item['rounds_format'] = fight_data['rounds_format']
+        fight_item['bout_type'] = fight_data.get('bout_type', '')
+        fight_item['weight_class_lbs'] = fight_data.get('weight_class_lbs', '')
+        fight_item['rounds_format'] = fight_data.get('rounds_format', '')
         fight_item['fight_order'] = fight_data.get('fight_order', '')
         return fight_item
 
@@ -113,12 +179,15 @@ class BaseFightParser:
         return items
 
     @staticmethod
-    def create_participation_items(fight_id, fighter1_data, fighter2_data, odds_data, ages_data, result1="pending", result2="pending"):
+    def create_participation_items(fight_id, fighter1_data, fighter2_data, odds_data=None, ages_data=None, result1="", result2=""):
+
+        odds_data = odds_data or {}
+        ages_data = ages_data or {}
 
         items = []
         for fighter_data, odds_value, odds_label, age, result in [
-            (fighter1_data, odds_data['fighter1_odds_value'], odds_data['fighter1_odds_label'], ages_data['fighter1_age'], result1),
-            (fighter2_data, odds_data['fighter2_odds_value'], odds_data['fighter2_odds_label'], ages_data['fighter2_age'], result2)
+            (fighter1_data, odds_data.get('fighter1_odds_value', None), odds_data.get('fighter1_odds_label', None), ages_data.get('fighter1_age', None), result1),
+            (fighter2_data, odds_data.get('fighter2_odds_value', None), odds_data.get('fighter2_odds_label', None), ages_data.get('fighter2_age', None), result2)
         ]:
             participation = FightParticipationItem()
             participation['fight_id'] = fight_id
@@ -129,3 +198,4 @@ class BaseFightParser:
             participation['result'] = result
             items.append(participation)
         return items
+

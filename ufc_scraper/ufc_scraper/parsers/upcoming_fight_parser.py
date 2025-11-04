@@ -6,9 +6,19 @@ class UpcomingFightParser(BaseFightParser):
     @staticmethod
     def parse_fights(response, event_id):
         fights = response.css('ul[data-event-view-toggle-target="list"] > li[data-controller="table-row-background"]')
+
+        # Parse normal fights
         for fight in fights:
-            for item in UpcomingFightParser.parse_single_fight(fight, response, event_id):
-                yield item
+            yield from UpcomingFightParser.parse_single_fight(fight, response, event_id)
+
+        # Parse cancelled fights
+        yield from UpcomingFightParser.parse_cancelled_fights(response, event_id)
+
+    @staticmethod
+    def parse_cancelled_fights(response, event_id):
+        cancelled_fights_divs = response.xpath('//div[starts-with(@id, "bout") and contains(@id, "Cancelled")]')
+        for cancelled_fight in cancelled_fights_divs:
+            yield from BaseFightParser.handle_cancelled_fight(cancelled_fight, response, event_id)
 
     @staticmethod
     def parse_single_fight(fight, response, event_id):
