@@ -51,6 +51,11 @@ class UFCEventsSpider(scrapy.Spider):
         for event in events:
             event_relative_url = event.css('div.promotion a::attr(href)').get(default='')
             if event_relative_url is not None:
+                event_name = event.css('div.promotion a::text').get(default='').strip()
+
+                if event_name.startswith("Road to UFC"):
+                    continue
+
                 event_url = response.urljoin(event_relative_url)
                 event_id = URLUtil.extract_event_id(event_relative_url)
                 for item in self.fetch_or_load(url=event_url, callback=self.parse_event, cb_kwargs={'event_id': event_id, 'event_url': event_url}):
