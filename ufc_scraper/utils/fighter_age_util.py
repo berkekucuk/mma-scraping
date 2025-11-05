@@ -4,6 +4,18 @@ import re
 class FighterAgeUtil:
 
     @staticmethod
+    def parse_ages(bout_details_div):
+
+        table = bout_details_div.css("table#boutComparisonTable")
+        ages = table.css("td.text-neutral-950::text").getall()
+        ages = [age.strip() for age in ages if "years" in age]
+
+        return {
+            "fighter1_age": (FighterAgeUtil.parse_fighter_age(ages[0]) if len(ages) > 0 else None),
+            "fighter2_age": (FighterAgeUtil.parse_fighter_age(ages[1]) if len(ages) > 1 else None),
+        }
+
+    @staticmethod
     def parse_fighter_age(age_at_fight_str):
 
         if not age_at_fight_str or not isinstance(age_at_fight_str, str):

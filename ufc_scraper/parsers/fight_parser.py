@@ -1,0 +1,91 @@
+from .cancelled_fight_parser import CancelledFightParser
+from ..utils.create_items_util import CreateItemsUtil
+from ..utils.fighter_age_util import FighterAgeUtil
+from ..utils.odds_util import OddsUtil
+from ..utils.fighter_info_util import FighterInfoUtil
+from ..utils.url_util import URLUtil
+from ..utils.method_util import MethodUtil
+
+
+class FightParser:
+
+    @staticmethod
+    def parse_fights(response, event_id):
+
+        fights = response.css('ul[data-event-view-toggle-target="list"] > li[data-controller="table-row-background"]')
+
+        cancelled_fights = response.xpath('//div[starts-with(@id, "bout") and contains(@id, "Cancelled")]')
+
+        # Parse normal fights
+        for fight in fights:
+            yield from FightParser.parse_single_fight(fight, response, event_id)
+
+        # Parse cancelled fights
+        for cancelled_fight in cancelled_fights:
+            yield from CancelledFightParser.parse_cancelled_fight(cancelled_fight, response, event_id)
+
+    @staticmethod
+    def parse_single_fight(fight, response, event_id):
+        web_view = fight.xpath("./div[1]")
+
+        ### Fight summary ###
+        fight_summary_div = web_view.xpath(".//div[contains(@class, 'flex w-full mt-1 mb-0.5 px-1.5')]")
+        method_str = fight_summary_div.css("span.uppercase::text").get(default="").strip()
+        method_parsed = MethodUtil.split_method(method_str)
+        method_type = method_parsed["method_type"]
+        method_detail = method_parsed["method_detail"]
+        round_summary = fight_summary_div.css(r"span.text-xs11.md\:text-xs10.leading-relaxed::text").get(default="").strip()
+
+        ### Fighter infos ###
+        fight_participants_div = web_view.xpath("./div[@class='div group flex items:start justify-center gap-0.5 md:gap-0']")
+        fighter1_div = fight_participants_div.xpath("./div[1]")
+        fighter2_div = fight_participants_div.xpath("./div[3]")
+
+        fighter1_data = FighterInfoUtil.parse_fighter_info(fighter1_div, response, is_first_fighter=True)
+        fighter2_data = FighterInfoUtil.parse_fighter_info(fighter2_div, response, is_first_fighter=False)
+
+        ### Fight metadata ###
+        middle_div = fight_participants_div.xpath("./div[2]")
+        box_div = middle_div.xpath("./div[1]")
+        bout_details_button_div = middle_div.xpath("./div[2]")
+
+        fight_relative_url = box_div.xpath("./span[1]/a/@href").get(default="").strip()
+        fight_id = URLUtil.extract_fight_id(fight_relative_url)
+        bout_type = box_div.xpath("./span[1]/a/text()").get(default="").strip()
+        weight_class_lbs = box_div.xpath("./div[1]/span/text()").get(default="").strip()
+        rounds_format = box_div.xpath("./div[2]/text()").get(default="").strip()
+        fight_order = bout_details_button_div.xpath(".//span[2]/text()").get(default="").strip()
+
+        fight_metadata = {
+            "fight_id": fight_id,
+            "bout_type": bout_type,
+            "weight_class_lbs": weight_class_lbs,
+            "rounds_format": rounds_format,
+            "fight_order": fight_order,
+        }
+
+        ### Odds and ages data ###
+        bout_details_div = web_view.xpath("./div[@data-event-bout-details-target='content']")
+        odds_data = OddsUtil.parse_odds(bout_details_div)
+        ages_data = FighterAgeUtil.parse_ages(bout_details_div)
+
+        ### yield items ###
+        yield CreateItemsUtil.create_fight_item(
+            fight_metadata,
+            event_id,
+            method_type=method_type,
+            method_detail=method_detail,
+            round_summary=round_summary,
+        )
+
+        for fighter_item in CreateItemsUtil.create_fighter_items(fighter1_data, fighter2_data):
+            yield fighter_item
+
+        for participation_item in CreateItemsUtil.create_participation_items(
+            fight_metadata["fight_id"],
+            fighter1_data,
+            fighter2_data,
+            odds_data,
+            ages_data,
+        ):
+            yield participation_item

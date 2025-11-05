@@ -281,3 +281,6 @@ secrets.py
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Project configuration
+pyproject.toml

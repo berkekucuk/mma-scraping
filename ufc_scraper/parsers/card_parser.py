@@ -11,22 +11,12 @@ class CardParser:
 
         container = response.css('ul[data-controller="unordered-list-background"]')
 
-        date_time_str = (
-            container.xpath("//span[contains(text(), 'Date/Time')]/following-sibling::span/text()")
-            .get(default="")
-            .strip()
-        )
+        date_time_str = container.xpath("//span[contains(text(), 'Date/Time')]/following-sibling::span/text()").get(default="").strip()
         datetime_utc = DateTimeUtil.parse_tapology_datetime(date_time_str)
 
-        venue = (
-            container.xpath("//span[contains(text(), 'Venue')]/following-sibling::span/text()").get(default="").strip()
-        )
+        venue = container.xpath("//span[contains(text(), 'Venue')]/following-sibling::span/text()").get(default="").strip()
 
-        location = (
-            container.xpath("//span[contains(text(), 'Location')]/following-sibling::span//text()")
-            .get(default="")
-            .strip()
-        )
+        location = container.xpath("//span[contains(text(), 'Location')]/following-sibling::span//text()").get(default="").strip()
 
         return {
             "status": status,

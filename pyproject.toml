@@ -1,5 +1,5 @@
 [tool.black]
-line-length = 120
+line-length = 140
 skip-string-normalization = true
 
 [tool.autopep8]

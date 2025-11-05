@@ -1,6 +1,3 @@
-from ..items import FighterItem
-
-
 class FighterParser:
 
     @staticmethod

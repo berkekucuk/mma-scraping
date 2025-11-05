@@ -1,4 +1,5 @@
 class MethodUtil:
+
     @staticmethod
     def split_method(method_str: str) -> dict:
         if not method_str or not isinstance(method_str, str):
