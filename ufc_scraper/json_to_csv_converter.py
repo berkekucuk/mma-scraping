@@ -9,36 +9,10 @@ output_dir.mkdir(parents=True, exist_ok=True)
 
 # 🔹 Her JSON dosyasına ait kolon tanımları
 schemas = {
-    "events": [
-        "event_id",
-        "event_type",
-        "event_name",
-        "date_time",
-        "venue",
-        "location"
-    ],
-    "fighters": [
-        "fighter_id",
-        "name",
-        "profile_url",
-        "image_url"
-    ],
-    "fights": [
-        "fight_id",
-        "event_id",
-        "weight_class",
-        "method",
-        "round_info",
-        "fight_result",
-        "winner_id"
-    ],
-    "participations": [
-        "fight_id",
-        "fighter_id",
-        "corner",
-        "odds",
-        "age_at_fight"
-    ]
+    "events": ["event_id", "event_type", "event_name", "date_time", "venue", "location"],
+    "fighters": ["fighter_id", "name", "profile_url", "image_url"],
+    "fights": ["fight_id", "event_id", "weight_class", "method", "round_info", "fight_result", "winner_id"],
+    "participations": ["fight_id", "fighter_id", "corner", "odds", "age_at_fight"],
 }
 
 # 🔁 JSON → CSV dönüştürme işlemi

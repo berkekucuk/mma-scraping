@@ -1,4 +1,3 @@
-
 class MethodUtil:
     @staticmethod
     def split_method(method_str: str) -> dict:
@@ -13,4 +12,3 @@ class MethodUtil:
             return {"method_type": parts[0], "method_detail": None}
         else:
             return {"method_type": parts[0], "method_detail": parts[1]}
-

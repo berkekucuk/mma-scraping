@@ -2,6 +2,7 @@ import json
 import logging
 from pathlib import Path
 
+
 class JsonExportPipeline:
 
     def __init__(self):
@@ -12,7 +13,7 @@ class JsonExportPipeline:
             "EventItem": {},
             "FightItem": {},
             "FighterItem": {},
-            "FightParticipationItem": {}
+            "FightParticipationItem": {},
         }
 
         # JSON dosya yolları
@@ -34,24 +35,15 @@ class JsonExportPipeline:
                         existing_data = json.load(f)
                         # id tabanlı dict oluştur
                         if key == "EventItem":
-                            self.data[key] = {
-                                d["event_id"]: d for d in existing_data
-                                }
+                            self.data[key] = {d["event_id"]: d for d in existing_data}
                         elif key == "FightItem":
-                            self.data[key] = {
-                                d["fight_id"]: d for d in existing_data
-                                }
+                            self.data[key] = {d["fight_id"]: d for d in existing_data}
                         elif key == "FighterItem":
-                            self.data[key] = {
-                                d["fighter_id"]: d for d in existing_data
-                                }
+                            self.data[key] = {d["fighter_id"]: d for d in existing_data}
                         elif key == "FightParticipationItem":
-                            self.data[key] = {
-                                f'{d["fight_id"]}-{d["fighter_id"]}': d for d in existing_data
-                                }
+                            self.data[key] = {f'{d["fight_id"]}-{d["fighter_id"]}': d for d in existing_data}
                 except json.JSONDecodeError:
                     self.data[key] = {}
-
 
     def process_item(self, item, spider):
         item_type = type(item).__name__
@@ -85,7 +77,6 @@ class JsonExportPipeline:
 
         return item
 
-
     def close_spider(self, spider):
         # Her tabloyu diske kaydet
         for class_name, items_dict in self.data.items():
@@ -98,5 +89,3 @@ class JsonExportPipeline:
             logging.info(f"[{spider.name}] {path.name} saved successfully ({len(items_list)} records).")
 
         logging.info(f"[{spider.name}] ✅ JsonExportPipeline completed — all data has been updated.")
-
-

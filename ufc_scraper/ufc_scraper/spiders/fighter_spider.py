@@ -4,6 +4,7 @@ from ..items import FighterItem
 from ..parsers.fighter_parser import FighterParser
 from ..services.html_cache_manager import HtmlCacheManager
 
+
 class FighterSpider(scrapy.Spider):
     name = "fighter"
     allowed_domains = ["tapology.com"]
@@ -19,14 +20,14 @@ class FighterSpider(scrapy.Spider):
         #     if url is not None:
         #         for item in self.fetch_or_load(url, self.parse_fighter, cb_kwargs={"fighter_id": fighter_id}):
         #             yield item
-                test_url = "https://www.tapology.com/fightcenter/fighters/119831-jack-della-maddalena"
-                fighter_id = "119831"  # veya ID sayısal ise "1425" gibi
+        test_url = "https://www.tapology.com/fightcenter/fighters/119831-jack-della-maddalena"
+        fighter_id = "119831"  # veya ID sayısal ise "1425" gibi
 
-                yield from self.fetch_or_load(
-                    url=test_url,
-                    callback=self.parse_fighter,
-                    cb_kwargs={"fighter_id": fighter_id},
-                    )
+        yield from self.fetch_or_load(
+            url=test_url,
+            callback=self.parse_fighter,
+            cb_kwargs={"fighter_id": fighter_id},
+        )
 
     def fetch_or_load(self, url, callback, cb_kwargs=None):
         response = HtmlCacheManager.load_from_cache(url)

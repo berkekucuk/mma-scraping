@@ -1,4 +1,3 @@
-
 class URLUtil:
 
     @staticmethod

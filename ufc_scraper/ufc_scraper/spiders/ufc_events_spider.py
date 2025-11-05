@@ -1,10 +1,10 @@
 import scrapy
+from ..parsers.fight_parser import FightParser
 from ..services.html_cache_manager import HtmlCacheManager
 from ..utils.url_util import URLUtil
 from ..parsers.card_parser import CardParser
-from ..parsers.completed_fight_parser import CompletedFightParser
-from ..parsers.upcoming_fight_parser import UpcomingFightParser
 from ..items import EventItem
+
 
 class UFCEventsSpider(scrapy.Spider):
 
@@ -35,10 +35,10 @@ class UFCEventsSpider(scrapy.Spider):
                 url=url,
                 callback=self.save_and_parse,
                 cb_kwargs={
-                    'original_callback': callback,
-                    'url': url,
-                    'cb_kwargs': cb_kwargs or {}
-                }
+                    "original_callback": callback,
+                    "url": url,
+                    "cb_kwargs": cb_kwargs or {},
+                },
             )
 
     def save_and_parse(self, response, original_callback, url, cb_kwargs):
@@ -47,18 +47,23 @@ class UFCEventsSpider(scrapy.Spider):
             yield item
 
     def parse(self, response):
-        events = response.css('div.flex.flex-col.border-b.border-solid.border-neutral-700')
+        events = response.css("div.flex.flex-col.border-b.border-solid.border-neutral-700")
         for event in events:
-            event_relative_url = event.css('div.promotion a::attr(href)').get(default='')
+            event_relative_url = event.css("div.promotion a::attr(href)").get(default="")
             if event_relative_url is not None:
-                event_name = event.css('div.promotion a::text').get(default='').strip()
+                event_name = event.css("div.promotion a::text").get(default="").strip()
 
                 if event_name.startswith("Road to UFC"):
                     continue
 
                 event_url = response.urljoin(event_relative_url)
                 event_id = URLUtil.extract_event_id(event_relative_url)
-                for item in self.fetch_or_load(url=event_url, callback=self.parse_event, cb_kwargs={'event_id': event_id, 'event_url': event_url}):
+
+                for item in self.fetch_or_load(
+                    url=event_url,
+                    callback=self.parse_event,
+                    cb_kwargs={"event_id": event_id, "event_url": event_url},
+                ):
                     yield item
 
     def parse_event(self, response, event_id, event_url):
@@ -66,14 +71,10 @@ class UFCEventsSpider(scrapy.Spider):
 
         # --- Event verisi ---
         event_item = EventItem()
-        event_item['event_id'] = event_id
-        event_item['event_url'] = event_url
+        event_item["event_id"] = event_id
+        event_item["event_url"] = event_url
         event_item.update(card_data)
         yield event_item
 
-        if card_data.get('status') == "Upcoming":
-            for fight_data in UpcomingFightParser.parse_fights(response, event_id):
-                yield fight_data
-        else:
-            for fight_data in CompletedFightParser.parse_fights(response, event_id):
-                yield fight_data
+        for fight_data in FightParser.parse_fights(response, event_id):
+            yield fight_data

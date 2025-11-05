@@ -1,5 +1,6 @@
 import re
 
+
 class OddsUtil:
     @staticmethod
     def split_odds(odds_str: str) -> dict:
@@ -13,7 +14,7 @@ class OddsUtil:
         odds_str = odds_str.strip()
 
         # Regex ile sayısal değer ve parantez içini yakala
-        match = re.match(r'([+-]?\d+)\s*\(([^)]+)\)', odds_str)
+        match = re.match(r"([+-]?\d+)\s*\(([^)]+)\)", odds_str)
         if match:
             value = int(match.group(1))
             label = match.group(2).strip()
@@ -25,4 +26,3 @@ class OddsUtil:
             return {"odds_value": value, "odds_label": None}
         except ValueError:
             return {"odds_value": None, "odds_label": odds_str}
-

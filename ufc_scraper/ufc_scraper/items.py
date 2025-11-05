@@ -5,6 +5,7 @@
 
 import scrapy
 
+
 class EventItem(scrapy.Item):
     event_id = scrapy.Field()  # PK
     event_url = scrapy.Field()
@@ -16,8 +17,8 @@ class EventItem(scrapy.Item):
 
 
 class FightItem(scrapy.Item):
-    fight_id = scrapy.Field()          # PK
-    event_id = scrapy.Field()          # FK -> EventItem
+    fight_id = scrapy.Field()  # PK
+    event_id = scrapy.Field()  # FK -> EventItem
     method_type = scrapy.Field()
     method_detail = scrapy.Field()
     round_summary = scrapy.Field()
@@ -28,7 +29,7 @@ class FightItem(scrapy.Item):
 
 
 class FighterItem(scrapy.Item):
-    fighter_id = scrapy.Field()        # PK
+    fighter_id = scrapy.Field()  # PK
     name = scrapy.Field()
     nickname = scrapy.Field()
     record = scrapy.Field()
@@ -43,11 +44,9 @@ class FighterItem(scrapy.Item):
 
 
 class FightParticipationItem(scrapy.Item):
-    fight_id = scrapy.Field()          # FK -> FightItem
-    fighter_id = scrapy.Field()        # FK -> FighterItem
+    fight_id = scrapy.Field()  # FK -> FightItem
+    fighter_id = scrapy.Field()  # FK -> FighterItem
     odds_value = scrapy.Field()
     odds_label = scrapy.Field()
     age_at_fight = scrapy.Field()
     result = scrapy.Field()
-
-

@@ -1,15 +1,16 @@
 from dateutil import parser
 from zoneinfo import ZoneInfo
-import logging 
+import logging
+
 
 class DateTimeUtil:
 
     @staticmethod
     def parse_tapology_datetime(date_time_str: str | None) -> str | None:
- 
+
         if not date_time_str:
             return None
-            
+
         try:
             eastern = ZoneInfo("America/New_York")
 
@@ -22,7 +23,7 @@ class DateTimeUtil:
 
             dt_utc = dt.astimezone(ZoneInfo("UTC"))
             return dt_utc.isoformat()
-        
+
         except Exception as e:
             logging.error(f"'{date_time_str}' parse edilirken hata oluştu: {e}")
             return None

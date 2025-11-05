@@ -1,0 +1,11 @@
+[tool.black]
+line-length = 120
+skip-string-normalization = true
+
+[tool.autopep8]
+max_line_length = 120
+ignore = ["E501"]
+
+[tool.isort]
+profile = "black"
+line_length = 120
