@@ -1,7 +1,7 @@
 import re
 
 
-class FighterAgeUtil:
+class AgeParser:
 
     @staticmethod
     def parse_ages(bout_details_div):
@@ -11,8 +11,8 @@ class FighterAgeUtil:
         ages = [age.strip() for age in ages if "years" in age]
 
         return {
-            "fighter1_age": (FighterAgeUtil.parse_fighter_age(ages[0]) if len(ages) > 0 else None),
-            "fighter2_age": (FighterAgeUtil.parse_fighter_age(ages[1]) if len(ages) > 1 else None),
+            "fighter1_age": (AgeParser.parse_fighter_age(ages[0]) if len(ages) > 0 else None),
+            "fighter2_age": (AgeParser.parse_fighter_age(ages[1]) if len(ages) > 1 else None),
         }
 
     @staticmethod

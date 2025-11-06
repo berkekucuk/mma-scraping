@@ -1,7 +1,7 @@
 import scrapy
 from ..parsers.fight_parser import FightParser
 from ..services.html_cache_manager import HtmlCacheManager
-from ..utils.url_util import URLUtil
+from ..utils.url_parser import UrlParser
 from ..parsers.card_parser import CardParser
 from ..items import EventItem
 
@@ -57,7 +57,7 @@ class UFCEventsSpider(scrapy.Spider):
                     continue
 
                 event_url = response.urljoin(event_relative_url)
-                event_id = URLUtil.extract_event_id(event_relative_url)
+                event_id = UrlParser.extract_event_id(event_relative_url)
 
                 for item in self.fetch_or_load(
                     url=event_url,

@@ -1,7 +1,8 @@
 from ..items import FightItem, FightParticipationItem, FighterItem
 
 
-class CreateItemsUtil:
+class ItemFactory:
+
     @staticmethod
     def create_fight_item(fight_metadata, event_id, method_type="", method_detail="", round_summary=""):
 
@@ -68,5 +69,6 @@ class CreateItemsUtil:
             participation["odds_label"] = odds_label
             participation["age_at_fight"] = age
             participation["result"] = result
+            participation["record_after_fight"] = fighter_data["record_after_fight"]
             items.append(participation)
         return items

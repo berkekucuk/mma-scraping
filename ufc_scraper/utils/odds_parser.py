@@ -2,7 +2,7 @@ import re
 import scrapy
 
 
-class OddsUtil:
+class OddsParser:
 
     @staticmethod
     def parse_odds(bout_details_div):
@@ -18,8 +18,8 @@ class OddsUtil:
             fighter1_odds = odds_texts[0] if len(odds_texts) > 0 else None
             fighter2_odds = odds_texts[1] if len(odds_texts) > 1 else None
 
-            f1_parsed = OddsUtil.split_odds(fighter1_odds)
-            f2_parsed = OddsUtil.split_odds(fighter2_odds)
+            f1_parsed = OddsParser.split_odds(fighter1_odds)
+            f2_parsed = OddsParser.split_odds(fighter2_odds)
 
             return {
                 "fighter1_odds_value": f1_parsed["odds_value"],

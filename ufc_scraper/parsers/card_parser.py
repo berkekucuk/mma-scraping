@@ -1,4 +1,4 @@
-from ..utils.date_time_util import DateTimeUtil
+from ..utils.datetime_parser import DatetimeParser
 
 
 class CardParser:
@@ -12,7 +12,7 @@ class CardParser:
         container = response.css('ul[data-controller="unordered-list-background"]')
 
         date_time_str = container.xpath("//span[contains(text(), 'Date/Time')]/following-sibling::span/text()").get(default="").strip()
-        datetime_utc = DateTimeUtil.parse_tapology_datetime(date_time_str)
+        datetime_utc = DatetimeParser.parse_tapology_datetime(date_time_str)
 
         venue = container.xpath("//span[contains(text(), 'Venue')]/following-sibling::span/text()").get(default="").strip()
 

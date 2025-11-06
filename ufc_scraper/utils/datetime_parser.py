@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 import logging
 
 
-class DateTimeUtil:
+class DatetimeParser:
 
     @staticmethod
     def parse_tapology_datetime(date_time_str: str | None) -> str | None:

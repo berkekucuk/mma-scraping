@@ -1,4 +1,4 @@
-class MethodUtil:
+class MethodParser:
 
     @staticmethod
     def split_method(method_str: str) -> dict:

@@ -1,4 +1,4 @@
-class FightResultUtil:
+class ResultParser:
 
     @staticmethod
     def determine_fight_result(fighter_div):
