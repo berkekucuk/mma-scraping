@@ -16,16 +16,19 @@ class FightParser:
 
         cancelled_fights = response.xpath('//div[starts-with(@id, "bout") and contains(@id, "Cancelled")]')
 
+        total_fights = len(fights)
+
         # Parse normal fights
-        for fight in fights:
-            yield from FightParser.parse_single_fight(fight, response, event_id)
+        for index, fight in enumerate(fights, start=1):
+            fight_order_number = total_fights - index + 1
+            yield from FightParser.parse_single_fight(fight, response, event_id, fight_order_number)
 
         # Parse cancelled fights
         for cancelled_fight in cancelled_fights:
             yield from CancelledFightParser.parse_cancelled_fight(cancelled_fight, response, event_id)
 
     @staticmethod
-    def parse_single_fight(fight, response, event_id):
+    def parse_single_fight(fight, response, event_id, auto_index):
         web_view = fight.xpath("./div[1]")
 
         ### Fight summary ###
@@ -58,7 +61,7 @@ class FightParser:
         bout_type = box_div.xpath("./span[1]/a/text()").get(default="").strip()
         weight_class_lbs = box_div.xpath("./div[1]/span/text()").get(default="").strip()
         rounds_format = box_div.xpath("./div[2]/text()").get(default="").strip()
-        fight_order = bout_details_button_div.xpath(".//span[2]/text()").get(default="").strip()
+        fight_order = bout_details_button_div.xpath(".//span[2]/text()").get(default="").strip() or str(auto_index)
 
         fight_metadata = {
             "fight_id": fight_id,
