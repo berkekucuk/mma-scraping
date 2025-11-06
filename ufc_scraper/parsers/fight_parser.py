@@ -32,9 +32,13 @@ class FightParser:
         fight_summary_div = web_view.xpath(".//div[contains(@class, 'flex w-full mt-1 mb-0.5 px-1.5')]")
         method_str = fight_summary_div.css("span.uppercase::text").get(default="").strip()
         method_parsed = MethodParser.split_method(method_str)
-        method_type = method_parsed["method_type"]
-        method_detail = method_parsed["method_detail"]
-        round_summary = fight_summary_div.css(r"span.text-xs11.md\:text-xs10.leading-relaxed::text").get(default="").strip()
+        round_summary = fight_summary_div.css(r"span.text-xs11.md\:text-xs10.leading-relaxed::text").get()
+
+        fight_summary = {
+        "method_type": method_parsed["method_type"],
+        "method_detail": method_parsed["method_detail"],
+        "round_summary": round_summary.strip() if round_summary else None,
+        }
 
         ### Fighter infos ###
         fight_participants_div = web_view.xpath("./div[@class='div group flex items:start justify-center gap-0.5 md:gap-0']")
@@ -73,9 +77,7 @@ class FightParser:
         yield ItemFactory.create_fight_item(
             fight_metadata,
             event_id,
-            method_type=method_type,
-            method_detail=method_detail,
-            round_summary=round_summary,
+            fight_summary,
         )
 
         for fighter_item in ItemFactory.create_fighter_items(fighter1_data, fighter2_data):

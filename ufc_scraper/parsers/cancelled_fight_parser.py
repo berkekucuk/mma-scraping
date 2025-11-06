@@ -6,6 +6,18 @@ class CancelledFightParser:
 
     @staticmethod
     def parse_cancelled_fight(cancelled_fight_div, response, event_id):
+
+        ### Fight summary ###
+        middle_div = cancelled_fight_div.xpath('.//div[@data-controller="tooltip"]')
+        status_text = middle_div.xpath(".//a/text()").get(default="").strip()
+        status_reason = middle_div.xpath('.//span[contains(@class, "text-sm")]/text()').get(default="").strip()
+
+        fight_summary = {
+            "method_type": status_text if status_text else None,
+            "method_detail": status_reason if status_reason else None,
+            "round_summary": None,
+        }
+
         # Sol dövüşçü
         fighter1_name = cancelled_fight_div.xpath('.//div[@id="leftNdesktop"]//a/text()').get(default="").strip()
         fighter1_relative_url = cancelled_fight_div.xpath('.//div[@id="leftNdesktop"]//a/@href').get(default="").strip()
@@ -20,14 +32,6 @@ class CancelledFightParser:
         fighter2_id = UrlParser.extract_fighter_id(fighter2_relative_url) if fighter2_relative_url else None
         fighter2_img = cancelled_fight_div.xpath('.//div[@id="rightNdesktop"]/following-sibling::div//img/@src').get(default="").strip()
 
-        # Orta kısım: durum ve cancelled bilgisi
-        middle_div = cancelled_fight_div.xpath('.//div[@data-controller="tooltip"]')
-        status_text = middle_div.xpath(".//a/text()").get(default="").strip()
-        status_reason = middle_div.xpath('.//span[contains(@class, "text-sm")]/text()').get(default="").strip()
-        fight_relative_url = middle_div.xpath(".//a/@href").get(default="").strip()
-        fight_id = UrlParser.extract_fight_id(fight_relative_url) if fight_relative_url else None
-
-        # Fighter data dictionaries
         fighter1_data = {
             "fighter_id": fighter1_id,
             "name": fighter1_name,
@@ -44,14 +48,23 @@ class CancelledFightParser:
             "record_after_fight": None,
         }
 
-        fight_metadata = {"fight_id": fight_id}
+        ### Fight metadata ###
+        fight_relative_url = middle_div.xpath(".//a/@href").get(default="").strip()
+        fight_id = UrlParser.extract_fight_id(fight_relative_url) if fight_relative_url else None
+
+        fight_metadata = {
+            "fight_id": fight_id,
+            "bout_type": None,
+            "weight_class_lbs": None,
+            "rounds_format": None,
+            "fight_order": None,
+        }
 
         # Yield FightItem
         yield ItemFactory.create_fight_item(
             fight_metadata,
             event_id,
-            method_type=status_text,
-            method_detail=status_reason,
+            fight_summary,
         )
 
         # Yield FighterItems

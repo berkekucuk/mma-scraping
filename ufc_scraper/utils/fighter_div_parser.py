@@ -22,7 +22,8 @@ class FighterDivParser:
             record_after_fight_string = fighter_div.xpath(
             './/span[contains(@class, "text-[15px]") and contains(@class, "md:text-xs") and contains(@class, "leading-tight")]/text()'
             ).get(default="").strip()
-            record_after_fight = FighterDivParser.parse_record_string(record_after_fight_string)
+            if record_after_fight_string:
+                record_after_fight = FighterDivParser.parse_record_string(record_after_fight_string)
 
         return {
             "fighter_id": fighter_id,

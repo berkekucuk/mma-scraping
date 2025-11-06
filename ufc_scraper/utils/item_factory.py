@@ -4,18 +4,18 @@ from ..items import FightItem, FightParticipationItem, FighterItem
 class ItemFactory:
 
     @staticmethod
-    def create_fight_item(fight_metadata, event_id, method_type="", method_detail="", round_summary=""):
+    def create_fight_item(fight_metadata, event_id, fight_summary):
 
         fight_item = FightItem()
-        fight_item["fight_id"] = fight_metadata["fight_id"]
+        fight_item["fight_id"] = fight_metadata.get("fight_id")
         fight_item["event_id"] = event_id
-        fight_item["method_type"] = method_type
-        fight_item["method_detail"] = method_detail
-        fight_item["round_summary"] = round_summary
-        fight_item["bout_type"] = fight_metadata.get("bout_type", "")
-        fight_item["weight_class_lbs"] = fight_metadata.get("weight_class_lbs", "")
-        fight_item["rounds_format"] = fight_metadata.get("rounds_format", "")
-        fight_item["fight_order"] = fight_metadata.get("fight_order", "")
+        fight_item["method_type"] = fight_summary.get("method_type")
+        fight_item["method_detail"] = fight_summary.get("method_detail")
+        fight_item["round_summary"] = fight_summary.get("round_summary")
+        fight_item["bout_type"] = fight_metadata.get("bout_type")
+        fight_item["weight_class_lbs"] = fight_metadata.get("weight_class_lbs")
+        fight_item["rounds_format"] = fight_metadata.get("rounds_format")
+        fight_item["fight_order"] = fight_metadata.get("fight_order")
         return fight_item
 
     @staticmethod
@@ -24,10 +24,10 @@ class ItemFactory:
         items = []
         for fighter_data in [fighter1_data, fighter2_data]:
             fighter_item = FighterItem()
-            fighter_item["fighter_id"] = fighter_data["fighter_id"]
-            fighter_item["name"] = fighter_data["name"]
-            fighter_item["profile_url"] = fighter_data["profile_url"]
-            fighter_item["image_url"] = fighter_data["image_url"]
+            fighter_item["fighter_id"] = fighter_data.get("fighter_id")
+            fighter_item["name"] = fighter_data.get("name")
+            fighter_item["profile_url"] = fighter_data.get("profile_url")
+            fighter_item["image_url"] = fighter_data.get("image_url")
             items.append(fighter_item)
         return items
 
@@ -64,11 +64,11 @@ class ItemFactory:
         ]:
             participation = FightParticipationItem()
             participation["fight_id"] = fight_id
-            participation["fighter_id"] = fighter_data["fighter_id"]
+            participation["fighter_id"] = fighter_data.get("fighter_id")
             participation["odds_value"] = odds_value
             participation["odds_label"] = odds_label
             participation["age_at_fight"] = age
             participation["result"] = result
-            participation["record_after_fight"] = fighter_data["record_after_fight"]
+            participation["record_after_fight"] = fighter_data.get("record_after_fight")
             items.append(participation)
         return items

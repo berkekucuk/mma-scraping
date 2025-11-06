@@ -64,9 +64,13 @@ ROBOTSTXT_OBEY = False
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+# Each pipeline runs independently and handles its own item type
 ITEM_PIPELINES = {
-    "ufc_scraper.pipelines.JsonExportPipeline": 100,
-    #'ufc_scraper.pipelines.SupabasePipeline': 300,
+    "ufc_scraper.pipelines.EventPipeline": 100,
+    "ufc_scraper.pipelines.FightPipeline": 200,
+    "ufc_scraper.pipelines.FighterPipeline": 300,
+    "ufc_scraper.pipelines.FightParticipationPipeline": 400,
+    # "ufc_scraper.pipelines.SupabasePipeline": 500,  # Optional
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

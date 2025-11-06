@@ -14,7 +14,7 @@ class FighterParser:
             "born": FighterParser.extract_detail(container, "Born:"),
             "fighting_out_of": FighterParser.extract_detail(container, "Fighting out of:"),
             "height": FighterParser.extract_detail(container, "Height:"),
-            "weight_class": FighterParser.extract_detail(container, "Weight Class:"),
+            "weight_class_name": FighterParser.extract_detail(container, "Weight Class:"),
             "reach": FighterParser.extract_reach(response),
         }
 
