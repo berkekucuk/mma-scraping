@@ -32,7 +32,6 @@ class FighterItem(scrapy.Item):
     fighter_id = scrapy.Field()  # PK
     name = scrapy.Field()
     nickname = scrapy.Field()
-    record = scrapy.Field()
     date_of_birth = scrapy.Field()
     born = scrapy.Field()
     fighting_out_of = scrapy.Field()
