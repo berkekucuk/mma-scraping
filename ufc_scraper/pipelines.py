@@ -29,6 +29,20 @@ class JsonPipeline:
         """Load existing data from all JSON files."""
         self.logger.info(f"[{spider.name}] JsonPipeline initialized")
 
+        # Only load relevant data based on spider type
+        if spider.name == "fighter":
+            # Load only fighters for fighter spider
+            if self.fighters_file.exists():
+                try:
+                    with open(self.fighters_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        self.fighters = {item['fighter_id']: item for item in data if item.get('fighter_id')}
+                    self.logger.info(f"[{spider.name}] Loaded {len(self.fighters)} fighters")
+                except json.JSONDecodeError as e:
+                    self.logger.error(f"[{spider.name}] Failed to load fighters: {e}")
+            return
+
+        # Load all data for other spiders
         # Load events
         if self.events_file.exists():
             try:
@@ -74,65 +88,63 @@ class JsonPipeline:
                 self.logger.error(f"[{spider.name}] Failed to load participations: {e}")
 
     def process_item(self, item, spider):
-        """Process items based on their type."""
+        """Process items based on their type - ID varsa tüm veriyi güncelle, yoksa ekle."""
         item_type = type(item).__name__
         item_dict = dict(item)
 
         if item_type == "EventItem":
             event_id = item_dict.get('event_id')
             if event_id:
+                # ID varsa → Tüm veriyi güncelle (overwrite)
+                self.events[event_id] = item_dict
                 if event_id in self.events:
-                    # Update existing event with non-None values
-                    for field, value in item_dict.items():
-                        if value is not None:
-                            self.events[event_id][field] = value
                     self.logger.debug(f"[{spider.name}] Event updated: {event_id}")
                 else:
-                    self.events[event_id] = item_dict
                     self.logger.info(f"[{spider.name}] Event added: {event_id}")
 
         elif item_type == "FightItem":
             fight_id = item_dict.get('fight_id')
             if fight_id:
+                # ID varsa → Tüm veriyi güncelle (overwrite)
+                self.fights[fight_id] = item_dict
                 if fight_id in self.fights:
-                    for field, value in item_dict.items():
-                        if value is not None:
-                            self.fights[fight_id][field] = value
                     self.logger.debug(f"[{spider.name}] Fight updated: {fight_id}")
                 else:
-                    self.fights[fight_id] = item_dict
                     self.logger.info(f"[{spider.name}] Fight added: {fight_id}")
 
         elif item_type == "FighterItem":
             fighter_id = item_dict.get('fighter_id')
             if fighter_id:
-                if fighter_id in self.fighters:
-                    for field, value in item_dict.items():
-                        if value is not None:
-                            self.fighters[fighter_id][field] = value
-                    self.logger.debug(f"[{spider.name}] Fighter updated: {fighter_id}")
-                else:
-                    self.fighters[fighter_id] = item_dict
-                    self.logger.info(f"[{spider.name}] Fighter added: {fighter_id}")
+                # ID varsa → Tüm veriyi güncelle (overwrite)
+                self.fighters[fighter_id] = item_dict
+                action = "updated" if fighter_id in self.fighters else "added"
+                self.logger.debug(f"[{spider.name}] Fighter {action}: {fighter_id}")
 
         elif item_type == "FightParticipationItem":
             fight_id = item_dict.get('fight_id')
             fighter_id = item_dict.get('fighter_id')
             if fight_id and fighter_id:
                 key = f"{fight_id}-{fighter_id}"
+                # ID varsa → Tüm veriyi güncelle (overwrite)
+                self.participations[key] = item_dict
                 if key in self.participations:
-                    for field, value in item_dict.items():
-                        if value is not None:
-                            self.participations[key][field] = value
                     self.logger.debug(f"[{spider.name}] Participation updated: {key}")
                 else:
-                    self.participations[key] = item_dict
                     self.logger.info(f"[{spider.name}] Participation added: {key}")
 
         return item
 
     def close_spider(self, spider):
         """Save all data to JSON files."""
+
+        # For fighter spider, only save fighters
+        if spider.name == "fighter":
+            with open(self.fighters_file, "w", encoding="utf-8") as f:
+                json.dump(list(self.fighters.values()), f, indent=2, ensure_ascii=False)
+            self.logger.info(f"[{spider.name}] ✅ fighters.json saved ({len(self.fighters)} records)")
+            return
+
+        # For other spiders, save all data
         # Save events
         with open(self.events_file, "w", encoding="utf-8") as f:
             json.dump(list(self.events.values()), f, indent=2, ensure_ascii=False)

@@ -1,5 +1,8 @@
-import os
-import json
+from ..utils.date_parser import DateParser
+from ..utils.record_parser import RecordParser
+from ..utils.country_parser import CountryParser
+from ..utils.measurement_parser import MeasurementParser
+
 
 class FighterParser:
 
@@ -8,66 +11,60 @@ class FighterParser:
         header = response.css("div#fighterPageHeader")
         container = response.css("div#standardDetails")
 
-        country_relative_url = header.css("img::attr(src)").get(default="").strip()
-        country_url = response.urljoin(country_relative_url)
-        country_code = FighterParser.extract_country_src(country_url)
+        nickname = FighterParser.extract_detail(container, "Nickname:")
 
-        if country_code and country_url:
-            FighterParser.save_country_to_json(country_code, country_url)
+        record_string = FighterParser.extract_detail(container, "Pro MMA Record:")
+        record = RecordParser.parse_record(record_string)
+
+        date_of_birth_string = FighterParser.extract_detail(container, "Date of Birth:")
+        date_of_birth = DateParser.parse_date_to_iso(date_of_birth_string)
+
+        height_string = FighterParser.extract_detail(container, "Height:")
+        height = MeasurementParser.parse_measurement(height_string)
+
+        reach_string = FighterParser.extract_reach(container)
+        reach = MeasurementParser.parse_measurement(reach_string)
+
+        weight_class_name = FighterParser.extract_detail(container, "Weight Class:") or None
+        born = FighterParser.extract_detail(container, "Born:") or None
+        fighting_out_of = FighterParser.extract_detail(container, "Fighting out of:") or None
+        style = FighterParser.extract_detail(container, "Foundation Style:") or None
+
+        country_flag_relative_url = header.css("img::attr(src)").get(default="").strip()
+        country_flag_url = response.urljoin(country_flag_relative_url)
+        country_code = CountryParser.extract_country_src(country_flag_url)
+
+        if country_flag_url and country_code:
+            CountryParser.save_country_to_json(country_code, country_flag_url)
 
         fighter_data = {
-            "nickname": FighterParser.extract_detail(container, "Nickname:"),
-            "date_of_birth": FighterParser.extract_detail(container, "Date of Birth:"),
-            "born": FighterParser.extract_detail(container, "Born:"),
-            "fighting_out_of": FighterParser.extract_detail(container, "Fighting out of:"),
-            "height": FighterParser.extract_detail(container, "Height:"),
-            "weight_class_name": FighterParser.extract_detail(container, "Weight Class:"),
-            "reach": FighterParser.extract_reach(container),
+            "nickname": nickname,
+            "record": record,
+            "date_of_birth": date_of_birth,
+            "height": height,
+            "reach": reach,
+            "weight_class_name": weight_class_name,
+            "born": born,
+            "fighting_out_of": fighting_out_of,
+            "style": style,
+            "country_code": country_code,
         }
 
         return fighter_data
 
     @staticmethod
     def extract_detail(container, label):
-        return container.xpath(
+        value = container.xpath(
             f'//strong[contains(text(), "{label}")]/following-sibling::span[1]/text()'
         ).get(default="").strip()
+        return value if value else None
 
     @staticmethod
     def extract_reach(container):
-        return (
+        value = (
             container.xpath('//strong[contains(text(), "Reach")]/ancestor::div/following-sibling::div[1]/span/text()')
             .get(default="")
             .strip()
         )
+        return value if value else None
 
-    @staticmethod
-    def extract_country_src(country_src):
-
-        if not country_src:
-            return ""
-
-        # Split by '/' and get the last part (filename)
-        filename = country_src.split('/')[-1]
-
-        # Split by '-' and get the first part (country code)
-        country_code = filename.split('-')[0]
-
-        return country_code
-
-    @staticmethod
-    def save_country_to_json(country_code, country_url, filepath="countries.json"):
-
-        # Load existing data if file exists
-        if os.path.exists(filepath):
-            with open(filepath, 'r', encoding='utf-8') as f:
-                countries = json.load(f)
-        else:
-            countries = {}
-
-        # Add or update country data
-        countries[country_code] = country_url
-
-        # Save to file
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(countries, f, indent=2, ensure_ascii=False)

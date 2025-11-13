@@ -31,16 +31,18 @@ class FightItem(scrapy.Item):
 class FighterItem(scrapy.Item):
     fighter_id = scrapy.Field()  # PK
     name = scrapy.Field()
-    nickname = scrapy.Field()
-    date_of_birth = scrapy.Field()
-    born = scrapy.Field()
-    fighting_out_of = scrapy.Field()
-    height = scrapy.Field()
-    weight_class_name = scrapy.Field()
-    reach = scrapy.Field()
     profile_url = scrapy.Field()
     image_url = scrapy.Field()
-
+    nickname = scrapy.Field()
+    record = scrapy.Field()
+    date_of_birth = scrapy.Field()
+    height = scrapy.Field()
+    reach = scrapy.Field()
+    weight_class_name = scrapy.Field()
+    born = scrapy.Field()
+    fighting_out_of = scrapy.Field()
+    style = scrapy.Field()
+    country_code = scrapy.Field()
 
 class FightParticipationItem(scrapy.Item):
     fight_id = scrapy.Field()  # FK -> FightItem
