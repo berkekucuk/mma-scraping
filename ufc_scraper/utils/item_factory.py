@@ -7,6 +7,7 @@ class ItemFactory:
     def create_fight_item(fight_metadata, event_id, fight_summary):
 
         fight_item = FightItem()
+        fight_item["item_type"] = "fight"
         fight_item["fight_id"] = fight_metadata.get("fight_id")
         fight_item["event_id"] = event_id
         fight_item["method_type"] = fight_summary.get("method_type")
@@ -24,6 +25,7 @@ class ItemFactory:
         items = []
         for fighter_data in [fighter1_data, fighter2_data]:
             fighter_item = FighterItem()
+            fighter_item["item_type"] = "fighter"
             fighter_item["fighter_id"] = fighter_data.get("fighter_id")
             fighter_item["name"] = fighter_data.get("name")
             fighter_item["profile_url"] = fighter_data.get("profile_url")
@@ -63,6 +65,7 @@ class ItemFactory:
             ),
         ]:
             participation = FightParticipationItem()
+            participation["item_type"] = "participation"
             participation["fight_id"] = fight_id
             participation["fighter_id"] = fighter_data.get("fighter_id")
             participation["odds_value"] = odds_value

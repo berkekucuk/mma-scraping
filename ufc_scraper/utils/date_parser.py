@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 class DateParser:
 
     @staticmethod
@@ -24,11 +25,11 @@ class DateParser:
 
         # Try different date formats
         date_formats = [
-            '%Y %b %d',      # 1987 Jul 19
-            '%Y %B %d',      # 1987 July 19
-            '%Y-%m-%d',      # 1987-07-19 (already ISO)
-            '%d %b %Y',      # 19 Jul 1987
-            '%d %B %Y',      # 19 July 1987
+            '%Y %b %d',  # 1987 Jul 19
+            '%Y %B %d',  # 1987 July 19
+            '%Y-%m-%d',  # 1987-07-19 (already ISO)
+            '%d %b %Y',  # 19 Jul 1987
+            '%d %B %Y',  # 19 July 1987
         ]
 
         for fmt in date_formats:

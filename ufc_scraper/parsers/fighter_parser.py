@@ -2,12 +2,14 @@ from ..utils.date_parser import DateParser
 from ..utils.record_parser import RecordParser
 from ..utils.country_parser import CountryParser
 from ..utils.measurement_parser import MeasurementParser
+from ..items import FighterItem
 
 
 class FighterParser:
 
     @staticmethod
-    def parse_fighter(response):
+    def parse_fighter_profile(response, fighter_id, name, profile_url, image_url):
+
         header = response.css("div#fighterPageHeader")
         container = response.css("div#standardDetails")
 
@@ -34,29 +36,28 @@ class FighterParser:
         country_flag_url = response.urljoin(country_flag_relative_url)
         country_code = CountryParser.extract_country_src(country_flag_url)
 
-        if country_flag_url and country_code:
-            CountryParser.save_country_to_json(country_code, country_flag_url)
+        fighter_item = FighterItem()
+        fighter_item["item_type"] = "fighter"
+        fighter_item["fighter_id"] = fighter_id
+        fighter_item["name"] = name
+        fighter_item["nickname"] = nickname
+        fighter_item["record"] = record
+        fighter_item["date_of_birth"] = date_of_birth
+        fighter_item["height"] = height
+        fighter_item["reach"] = reach
+        fighter_item["weight_class_name"] = weight_class_name
+        fighter_item["born"] = born
+        fighter_item["fighting_out_of"] = fighting_out_of
+        fighter_item["style"] = style
+        fighter_item["country_code"] = country_code
+        fighter_item["profile_url"] = profile_url
+        fighter_item["image_url"] = image_url
 
-        fighter_data = {
-            "nickname": nickname,
-            "record": record,
-            "date_of_birth": date_of_birth,
-            "height": height,
-            "reach": reach,
-            "weight_class_name": weight_class_name,
-            "born": born,
-            "fighting_out_of": fighting_out_of,
-            "style": style,
-            "country_code": country_code,
-        }
-
-        return fighter_data
+        yield fighter_item
 
     @staticmethod
     def extract_detail(container, label):
-        value = container.xpath(
-            f'//strong[contains(text(), "{label}")]/following-sibling::span[1]/text()'
-        ).get(default="").strip()
+        value = container.xpath(f'//strong[contains(text(), "{label}")]/following-sibling::span[1]/text()').get(default="").strip()
         return value if value else None
 
     @staticmethod
@@ -67,4 +68,3 @@ class FighterParser:
             .strip()
         )
         return value if value else None
-

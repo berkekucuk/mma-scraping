@@ -3,4 +3,4 @@
 # Please refer to the documentation for information on how to create and manage
 # your spiders.
 
-from .ufc_events_spider import UFCEventsSpider
+from .event_spider import EventSpider

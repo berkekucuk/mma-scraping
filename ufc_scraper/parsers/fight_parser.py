@@ -35,12 +35,12 @@ class FightParser:
         fight_summary_div = web_view.xpath(".//div[contains(@class, 'flex w-full mt-1 mb-0.5 px-1.5')]")
         method_str = fight_summary_div.css("span.uppercase::text").get(default="").strip()
         method_parsed = MethodParser.split_method(method_str)
-        round_summary = fight_summary_div.css(r"span.text-xs11.md\:text-xs10.leading-relaxed::text").get()
+        round_summary = fight_summary_div.css("span.text-xs11.md\:text-xs10.leading-relaxed::text").get()
 
         fight_summary = {
-        "method_type": method_parsed["method_type"],
-        "method_detail": method_parsed["method_detail"],
-        "round_summary": round_summary.strip() if round_summary else None,
+            "method_type": method_parsed["method_type"],
+            "method_detail": method_parsed["method_detail"],
+            "round_summary": round_summary.strip() if round_summary else None,
         }
 
         ### Fighter infos ###
@@ -58,6 +58,10 @@ class FightParser:
 
         fight_relative_url = box_div.xpath("./span[1]/a/@href").get(default="").strip()
         fight_id = UrlParser.extract_fight_id(fight_relative_url)
+        if not fight_id:
+            response.logger.error(f"Could not extract fight_id from URL: {fight_relative_url}")
+            return
+
         bout_type = box_div.xpath("./span[1]/a/text()").get(default="").strip()
         weight_class_lbs = box_div.xpath("./div[1]/span/text()").get(default="").strip()
         rounds_format = box_div.xpath("./div[2]/text()").get(default="").strip()

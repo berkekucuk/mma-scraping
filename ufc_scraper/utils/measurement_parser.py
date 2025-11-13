@@ -1,5 +1,6 @@
 import re
 
+
 class MeasurementParser:
 
     @staticmethod
@@ -15,10 +16,7 @@ class MeasurementParser:
         Returns dict with imperial (str) and metric (int) values
         """
         if not measurement_string or measurement_string.strip() == "" or measurement_string == "N/A":
-            return {
-                "imperial": None,
-                "metric": None
-            }
+            return {"imperial": None, "metric": None}
 
         # Extract imperial (everything before opening parenthesis)
         imperial_match = re.search(r'^(.+?)\s*\(', measurement_string)
@@ -28,7 +26,4 @@ class MeasurementParser:
         metric_match = re.search(r'\((\d+\.?\d*)cm\)', measurement_string)
         metric = int(float(metric_match.group(1))) if metric_match else None
 
-        return {
-            "imperial": imperial,
-            "metric": metric
-        }
+        return {"imperial": imperial, "metric": metric}
