@@ -1,8 +1,7 @@
 import scrapy
 from ..utils.url_parser import UrlParser
-from ..services.supabase_manager import SupabaseManager
 from ..parsers.card_parser import CardParser
-
+from ..services.supabase_manager import SupabaseManager
 
 class EventSpider(scrapy.Spider):
 
@@ -16,16 +15,16 @@ class EventSpider(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super(EventSpider, self).__init__(*args, **kwargs)
-        self.supabase = SupabaseManager()
+        self.supabase = SupabaseManager
 
     async def start(self):
         url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page=1"
         yield scrapy.Request(url, callback=self.parse)
 
-    def parse(self, response):
+    # ❗ PARSE METODU ASYNC OLARAK DEĞİŞTİ
+    async def parse(self, response):
         events = response.css('div[data-controller="bout-toggler"]')
-
-        self.logger.info(f"Found {len(events)} events on page")
+        self.logger.info(f"Found {len(events)} events on page {response.url}")
 
         for event in events:
             event_relative_url = event.css("div.promotion a::attr(href)").get(default="")
@@ -45,13 +44,20 @@ class EventSpider(scrapy.Spider):
                 self.logger.error(f"Could not extract event_id from: {event_relative_url}")
                 continue
 
-            existing_event = self.supabase.get_event_by_id(event_id)
+            # ----------------------------------------------------
+            # ❗ KONTROL MANTIĞI BURAYA ASENKRON OLARAK EKLENDİ
+            # ----------------------------------------------------
+            current_event = await self.supabase.get_event_by_id(event_id)
 
-            if existing_event and self.is_event_complete(existing_event):
-                self.logger.info(f"Event already exists with complete data: {event_id}")
-                continue
+            if current_event and self.is_event_complete(current_event):
+                self.logger.debug(f"Event already exists with complete data: {event_id}. Skipping request.")
+                continue  # <-- Bu etkinlik tam, detay sayfasına GİTME
+            # ----------------------------------------------------
 
-            self.logger.info(f"Event needs scraping: {event_id}")
+            if not current_event:
+                self.logger.info(f"New event found. Yielding request: {event_id}")
+            else:
+                self.logger.info(f"Incomplete event data. Yielding request: {event_id}")
 
             yield scrapy.Request(
                 url=event_url,
@@ -59,10 +65,17 @@ class EventSpider(scrapy.Spider):
                 cb_kwargs={
                     "event_id": event_id,
                     "event_url": event_url,
-                    "spider": self
                 },
             )
 
-    def is_event_complete(self, event):
+    # ❗ KONTROL METODU GERİ EKLENDİ
+    def is_event_complete(self, event: dict) -> bool:
         required_fields = ['name', 'status', 'datetime_utc', 'venue', 'location']
-        return all(event.get(field) not in (None, "", " ", "N/A") for field in required_fields)
+
+        # 'N/A', 'TBD' gibi eksik verileri de kontrol et
+        incomplete_values = (None, "", " ", "N/A", "TBD")
+
+        for field in required_fields:
+            if event.get(field) in incomplete_values:
+                return False
+        return True

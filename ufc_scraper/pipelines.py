@@ -1,14 +1,21 @@
-import scrapy
+import logging
 from itemadapter import ItemAdapter
-from .parsers.fighter_parser import FighterParser
+from .services.supabase_manager import SupabaseManager
 
 class EventPipeline:
 
-    def open_spider(self, spider):
-        self.supabase = spider.supabase
-        self.logger = spider.logger
+    def __init__(self):
+        """Pipeline başladığında kendi logger'ını ve DB yöneticisini hazırlar."""
+        self.supabase = SupabaseManager
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.info("EventPipeline initialized.")
 
-    def process_item(self, item, spider):
+    async def process_item(self, item, spider):
+        """
+        Gelen item'ı asenkron olarak işler.
+        Spider zaten ön filtreleme yaptığı için, bu item'ın
+        ya YENİ ya da GÜNCELLENECEK olduğunu varsayarız.
+        """
         adapter = ItemAdapter(item)
 
         # Sadece EventItem'ları işle
@@ -20,69 +27,71 @@ class EventPipeline:
             self.logger.error("EventItem has no event_id. Skipping.")
             return item
 
-        # DB'ye gönderilecek veriyi oluştur
+        # DB'ye gönderilecek veriyi hazırla
         event_data = adapter.asdict()
-
-        # ❗ item_type DB'ye gönderilmemeli → kaldırıyoruz
         event_data.pop("item_type", None)
 
-        # Var olan kayıt
-        existing = self.supabase.get_event_by_id(event_id)
+        existing = await self.supabase.get_event_by_id(event_id)
 
-        # INSERT
+        # 1. KARAR: INSERT (Eğer yoksa)
         if not existing:
-            self.logger.info(f"[EVENT] Inserting event: {event_id}")
-            res = self.supabase.insert_event(event_data)
+            self.logger.info(f"[EVENT] Inserting new event: {event_id}")
+            res = await self.supabase.insert_event(event_data)
             if res is None:
                 self.logger.error(f"[EVENT] Insert failed: {event_id}")
             return item
 
-        # UPDATE (sadece değişiklik varsa)
+        # 2. KARAR: UPDATE (Eğer varsa)
+        # Spider buraya sadece "incomplete" olanları yolladı,
+        # bu yüzden 'has_changes' kontrolüne gerek yok, direkt güncelleyebiliriz.
+        # Yine de emin olmak için bir değişiklik kontrolü yapmakta zarar yok.
+
         has_changes = any(
-            event_data.get(field) != existing.get(field)
+            str(event_data.get(field)) != str(existing.get(field))
             for field in event_data.keys()
         )
 
         if has_changes:
-            self.logger.info(f"[EVENT] Updating event: {event_id}")
-            res = self.supabase.update_event(event_id, event_data)
+            self.logger.info(f"[EVENT] Updating incomplete event: {event_id}")
+            res = await self.supabase.update_event(event_id, event_data)
             if res is None:
                 self.logger.error(f"[EVENT] Update failed: {event_id}")
         else:
-            self.logger.info(f"[EVENT] No changes for event: {event_id}")
+            # Bu durumun olmaması gerekir (çünkü spider eksik diye yolladı)
+            # ama loglamak iyidir.
+            self.logger.info(f"[EVENT] No changes detected for supposedly incomplete event: {event_id}")
 
         return item
 
 
+# class FighterPipeline:
 
-class FighterPipeline:
+#     def process_item(self, item, spider):
+#         adapter = ItemAdapter(item)
 
-    def process_item(self, item, spider):
-        adapter = ItemAdapter(item)
+#         # sadece fighter item'larını işle
+#         if adapter.get("item_type") != "fighter":
+#             return item
 
-        # sadece fighter item'larını işle
-        if adapter.get("item_type") != "fighter":
-            return item
+#         fighter_id = adapter.get("fighter_id")
+#         profile_url = adapter.get("profile_url")
+#         name = adapter.get("name")
+#         image_url = adapter.get("image_url")
 
-        fighter_id = adapter.get("fighter_id")
-        profile_url = adapter.get("profile_url")
-        name = adapter.get("name")
-        image_url = adapter.get("image_url")
+#         # DB'deki mevcut fighter'ı kontrol et
+#         existing = spider.supabase.get_fighter_by_id(fighter_id)
 
-        # DB'deki mevcut fighter'ı kontrol et
-        existing = spider.supabase.get_fighter_by_id(fighter_id)
+#         # Eğer DB'de veri yoksa veya incomplete ise -> scraping yap
+#         if not existing or not spider.is_fighter_complete(existing):
+#             spider.logger.info(f"[PIPELINE] Scraping fighter: {fighter_id}")
 
-        # Eğer DB'de veri yoksa veya incomplete ise -> scraping yap
-        if not existing or not spider.is_fighter_complete(existing):
-            spider.logger.info(f"[PIPELINE] Scraping fighter: {fighter_id}")
+#             return scrapy.Request(
+#                 url=profile_url,
+#                 callback=FighterParser.parse_fighter_profile,
+#                 cb_kwargs={"fighter_id": fighter_id, "name": name, "profile_url": profile_url, "image_url": image_url},
+#             )
 
-            return scrapy.Request(
-                url=profile_url,
-                callback=FighterParser.parse_fighter_profile,
-                cb_kwargs={"fighter_id": fighter_id, "name": name, "profile_url": profile_url, "image_url": image_url},
-            )
+#         # DB'de varsa → DB'yi güncelle
+#         spider.supabase.insert_or_update_fighter(adapter.asdict())
 
-        # DB'de varsa → DB'yi güncelle
-        spider.supabase.insert_or_update_fighter(adapter.asdict())
-
-        return item
+#         return item

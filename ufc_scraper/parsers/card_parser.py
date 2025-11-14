@@ -1,14 +1,18 @@
-from urllib import response
+import logging
 from ..items import EventItem
 from ..utils.datetime_parser import DatetimeParser
 from ..utils.status_parser import StatusParser
 
+# Bu modül için standart bir logger oluştur
+logger = logging.getLogger(__name__)
+
 class CardParser:
 
     @staticmethod
-    def parse_card(response, event_id, event_url, spider):
+    def parse_card(response, event_id, event_url):
 
-        spider.logger.info(f"Parsing event: {event_id}")
+        # 'spider.logger' yerine modülün kendi logger'ını kullan
+        logger.info(f"Parsing event: {event_id}")
 
         # --- Status ---
         status_string = response.css("div#eventPageHeader span::text").get(default="").strip()

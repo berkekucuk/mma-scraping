@@ -14,7 +14,10 @@ class DatetimeParser:
         try:
             eastern = ZoneInfo("America/New_York")
 
-            dt = parser.parse(date_time_str, fuzzy=True)
+            tzinfos = {"ET": eastern}
+
+            # 'date_time_str' parse edilirken tzinfos kullanılır
+            dt = parser.parse(date_time_str, fuzzy=True, tzinfos=tzinfos)
 
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=eastern)
