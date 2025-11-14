@@ -57,13 +57,13 @@ class FighterParser:
 
     @staticmethod
     def extract_detail(container, label):
-        value = container.xpath(f'//strong[contains(text(), "{label}")]/following-sibling::span[1]/text()').get(default="").strip()
+        value = container.xpath(f'.//strong[contains(text(), "{label}")]/following-sibling::span[1]/text()').get(default="").strip()
         return value if value else None
 
     @staticmethod
     def extract_reach(container):
         value = (
-            container.xpath('//strong[contains(text(), "Reach")]/ancestor::div/following-sibling::div[1]/span/text()')
+            container.xpath('.//strong[contains(text(), "Reach")]/ancestor::div/following-sibling::div[1]/span/text()')
             .get(default="")
             .strip()
         )

@@ -1,3 +1,4 @@
+import logging
 from .cancelled_fight_parser import CancelledFightParser
 from ..utils.item_factory import ItemFactory
 from ..utils.age_parser import AgeParser
@@ -6,6 +7,7 @@ from ..utils.fighter_div_parser import FighterDivParser
 from ..utils.url_parser import UrlParser
 from ..utils.method_parser import MethodParser
 
+logger = logging.getLogger(__name__)
 
 class FightParser:
 
@@ -59,7 +61,7 @@ class FightParser:
         fight_relative_url = box_div.xpath("./span[1]/a/@href").get(default="").strip()
         fight_id = UrlParser.extract_fight_id(fight_relative_url)
         if not fight_id:
-            response.logger.error(f"Could not extract fight_id from URL: {fight_relative_url}")
+            logger.error(f"Could not extract fight_id from URL: {fight_relative_url}")
             return
 
         bout_type = box_div.xpath("./span[1]/a/text()").get(default="").strip()

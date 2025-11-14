@@ -8,11 +8,6 @@ class EventSpider(scrapy.Spider):
     name = "event"
     allowed_domains = ["tapology.com"]
 
-    custom_settings = {
-        'CONCURRENT_REQUESTS': 1,
-        'DOWNLOAD_DELAY': 2,
-    }
-
     def __init__(self, *args, **kwargs):
         super(EventSpider, self).__init__(*args, **kwargs)
         self.supabase = SupabaseManager
