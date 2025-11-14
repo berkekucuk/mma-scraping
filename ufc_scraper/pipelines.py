@@ -1,7 +1,9 @@
 import logging
 import scrapy
+import httpx
+import os
 from itemadapter import ItemAdapter
-from scrapy.exceptions import DropItem  # <-- YENİ IMPORT (Item'ı durdurmak için)
+from scrapy.exceptions import DropItem
 from .services.supabase_manager import SupabaseManager
 from .parsers.fighter_parser import FighterParser
 
@@ -12,6 +14,7 @@ class DatabasePipeline:
         self.supabase = SupabaseManager
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info("Unified DatabasePipeline initialized.")
+        self._httpx_client = httpx.AsyncClient()
 
     async def process_item(self, item, spider):
         """
@@ -91,12 +94,11 @@ class DatabasePipeline:
             self.logger.debug(f"[FIGHT] No changes for fight: {fight_id}")
 
 
-    # ❗ YENİ GÜNCELLENMİŞ METOT
     async def _process_fighter(self, adapter: ItemAdapter, spider):
         """
         FighterItem'ları işler.
-        Eğer dövüşçü DB'de yoksa, profilini scrape etmek için
-        Spider'a 'geri seslenir' (schedules new request).
+        Eğer dövüşçü DB'de yoksa VEYA profil sayfasından gelen TAM veriyse
+        resim indirme/yükleme işlemini de tetikler.
         """
 
         fighter_id = adapter.get("fighter_id")
@@ -106,6 +108,7 @@ class DatabasePipeline:
 
         fighter_data = adapter.asdict()
         profile_url = adapter.get("profile_url")
+        original_image_url = adapter.get("image_url") # Kazınan orjinal resim URL'si
 
         existing = await self.supabase.get_fighter_by_id(fighter_id)
 
@@ -113,49 +116,59 @@ class DatabasePipeline:
             self.logger.error(f"[FIGHTER] Supabase SELECT failed, skipping: {fighter_id}")
             return
 
-        # === 1. YENİ DÖVÜŞÇÜ (NEW FIGHTER) ===
+        # === DURUM 1: YENİ DÖVÜŞÇÜ (DB'de yok) ===
         if not existing:
-            # Dövüşçü DB'de yok. Profilin tamamı scrape EDİLMELİ.
+            self.logger.info(f"[FIGHTER] New fighter {fighter_id}. Processing...")
 
-            if not profile_url:
-                # Profil URL'si yoksa scrape edemeyiz.
-                # Eksik veriyi basıp bırakalım.
-                self.logger.warning(f"[FIGHTER] New fighter {fighter_id} has no profile_url. Inserting incomplete data.")
-                fighter_data.pop("item_type", None)
-                await self.supabase.insert_fighter(fighter_data)
-                return
+            # --- Resim İşlemini Tetikle ---
+            if original_image_url:
+                public_url = await self.handle_image_upload(original_image_url, fighter_id)
+                if public_url:
+                    # 'fighter_data' içindeki URL'i bizim bucket URL'imiz ile değiştir
+                    fighter_data["image_url"] = public_url
 
-            # A. ÖNCE EKSİK KAYDI AT (Sonsuz döngüyü önlemek için)
-            # Bu, "bu dövüşçüyü scrape etmeye başladım" diye bir
-            # 'placeholder' (yer tutucu) oluşturur.
-            self.logger.info(f"[FIGHTER] New fighter {fighter_id}. Inserting placeholder & scheduling scrape.")
+            # --- Yer Tutucu (Placeholder) Ekle ---
+            self.logger.info(f"[FIGHTER] Inserting placeholder for {fighter_id}")
             fighter_data.pop("item_type", None)
             await self.supabase.insert_fighter(fighter_data)
 
-            # B. SONRA SCRAPE İSTEĞİNİ ZAMANLA (SCHEDULE)
-            request = scrapy.Request(
-                url=profile_url,
-                callback=FighterParser.parse_fighter_profile,
-                cb_kwargs={
-                    "fighter_id": fighter_id,
-                    "name": adapter.get("name"),
-                    "profile_url": profile_url,
-                    "image_url": adapter.get("image_url")
-                }
-            )
+            # --- Profil Scrape Görevini Planla ---
+            if profile_url:
+                self.logger.info(f"[FIGHTER] Scheduling profile scrape for {fighter_id}")
+                request = scrapy.Request(
+                    url=profile_url,
+                    callback=FighterParser.parse_fighter_profile,
+                    cb_kwargs={
+                        "fighter_id": fighter_id,
+                        "name": adapter.get("name"),
+                        "profile_url": profile_url,
+                        "image_url": original_image_url # Orijinal URL'i yolluyoruz
+                    }
+                )
+                spider.crawler.engine.crawl(request)
+                raise DropItem(f"Scraping new fighter profile: {fighter_id}")
 
-            # İsteği doğrudan Scrapy motoruna enjekte et
-            await spider.crawler.engine.crawl(request)
+            return # Profil URL'si yoksa işlem bitti
 
-            # Bu 'eksik' item ile işimiz bitti, pipeline'da devam etmesin.
-            raise DropItem(f"Scraping new fighter profile: {fighter_id}")
+        # === DURUM 2: MEVCUT DÖVÜŞÇÜ (DB'de var) ===
+        # Bu, muhtemelen 'parse_fighter_profile'dan gelen TAM veridir.
 
+        # --- Resim İşlemini Tekrar Kontrol Et ---
+        # DB'deki URL bizim bucket URL'imiz mi, yoksa hala eski Tapology URL'si mi?
+        existing_image_url = existing.get("image_url")
+        needs_image_upload = False
 
-        # === 2. MEVCUT DÖVÜŞÇÜ (EXISTING FIGHTER) ===
-        # Dövüşçü DB'de zaten var.
-        # Bu item, 'parse_fighter_profile'dan gelen TAM veri olabilir
-        # VEYA 'FightParser'dan gelen 'record' gibi güncel bir özet olabilir.
+        if original_image_url and "supabase.co" not in str(existing_image_url):
+            # DB'deki resim URL'si bizim bucket linkimiz değil.
+            # YENİDEN İNDİR/YÜKLE.
+            needs_image_upload = True
 
+        if needs_image_upload:
+            public_url = await self.handle_image_upload(original_image_url, fighter_id)
+            if public_url:
+                fighter_data["image_url"] = public_url
+
+        # --- Değişiklik Varsa Güncelle ---
         fighter_data.pop("item_type", None)
         if self._has_changes(fighter_data, existing):
             self.logger.info(f"[FIGHTER] Updating existing fighter: {fighter_id}")
@@ -164,15 +177,54 @@ class DatabasePipeline:
             self.logger.debug(f"[FIGHTER] No changes for fighter: {fighter_id}")
 
 
+    async def handle_image_upload(self, original_image_url: str, fighter_id: str) -> str | None:
+        """
+        Resim indirme ve Supabase'e yükleme işlemini birleştiren yardımcı metot.
+        """
+        self.logger.debug(f"[IMAGE_HANDLER] Downloading image for {fighter_id} from {original_image_url}")
+
+        # 1. Resmi Asenkron İndir
+        file_body = await self.download_image_async(original_image_url)
+        if not file_body:
+            return None
+
+        # 2. Dosya Adını Belirle (örn: 12345.jpg)
+        # Orijinal URL'den uzantıyı al, alamazsan .jpg kullan
+        file_ext = os.path.splitext(original_image_url)[1].lower()
+        if file_ext not in ['.jpg', '.jpeg', '.png', '.webp']:
+            file_ext = '.jpg'
+
+        file_name = f"{fighter_id}{file_ext}"
+
+        # 3. Supabase'e Yükle
+        public_url = await self.supabase.upload_fighter_image(file_name, file_body)
+        return public_url
+
+
+    async def download_image_async(self, original_image_url: str) -> bytes | None:
+        """Paylaşımlı httpx istemcisi ile bir resmi indirir."""
+        try:
+            response = await self._httpx_client.get(original_image_url)
+            response.raise_for_status() # 4xx/5xx hatalarını yakala
+            return response.content
+        except Exception as e:
+            self.logger.error(f"Failed to download image {original_image_url}: {e}")
+            return None
+
+
     async def _process_participation(self, adapter: ItemAdapter):
         # ... (Bu metot bir önceki cevaptaki gibi, değişiklik yok) ...
         fight_id = adapter.get("fight_id"); fighter_id = adapter.get("fighter_id")
+
         if not fight_id or not fighter_id:
             self.logger.warning("[PARTICIPATION] ParticipationItem is missing key IDs. Skipping.")
             return
+
         participation_data = adapter.asdict(); participation_data.pop("item_type", None)
+
         existing = await self.supabase.get_participation(fight_id, fighter_id)
         if existing == "invalid": return
+
         if not existing:
             self.logger.info(f"[PARTICIPATION] Inserting participation: {fight_id}/{fighter_id}")
             await self.supabase.insert_participation(participation_data)
@@ -194,3 +246,4 @@ class DatabasePipeline:
             if new_value != old_value:
                 return True
         return False
+

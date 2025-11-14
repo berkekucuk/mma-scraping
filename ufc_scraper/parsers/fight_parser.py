@@ -37,7 +37,7 @@ class FightParser:
         fight_summary_div = web_view.xpath(".//div[contains(@class, 'flex w-full mt-1 mb-0.5 px-1.5')]")
         method_str = fight_summary_div.css("span.uppercase::text").get(default="").strip()
         method_parsed = MethodParser.split_method(method_str)
-        round_summary = fight_summary_div.css("span.text-xs11.md\:text-xs10.leading-relaxed::text").get()
+        round_summary = fight_summary_div.css(r"span.text-xs11.md\:text-xs10.leading-relaxed::text").get()
 
         fight_summary = {
             "method_type": method_parsed["method_type"],

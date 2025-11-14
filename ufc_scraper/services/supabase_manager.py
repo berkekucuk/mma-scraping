@@ -65,6 +65,22 @@ class SupabaseManager:
         return await cls._get_by_id("events", "event_id", event_id)
 
     @classmethod
+    async def get_upcoming_events(cls):
+        """
+        'events' tablosundan status'u 'Upcoming' olan tüm etkinlikleri getirir.
+        """
+        try:
+            client = await cls.get_client()
+            response = await client.table("events").select("event_id, event_url") \
+                .eq("status", "Upcoming") \
+                .execute()
+
+            return response.data
+        except Exception as e:
+            cls._logger.error(f"Failed to get upcoming events: {e}")
+            return None # Hata durumunda boş liste döndür
+
+    @classmethod
     async def insert_event(cls, event_data: dict):
         try:
             client = await cls.get_client()
@@ -128,7 +144,32 @@ class SupabaseManager:
         except Exception as e:
             cls._logger.error(f"Failed to update fighter {fighter_id}: {e}")
 
-    
+    @classmethod
+    async def upload_fighter_image(cls, file_name: str, file_body: bytes) -> str | None:
+        """
+        Bir resim dosyasını (bytes) Supabase Storage'a yükler ve public URL'ini döndürür.
+        """
+        try:
+            client = await cls.get_client()
+
+            # 'file_options' ile 'upsert=True' diyoruz.
+            # Bu, "eğer dosya varsa üzerine yaz, yoksa oluştur" demektir.
+            await client.storage.from_("fighter-images").upload(
+                path=file_name,
+                file=file_body,
+                file_options={"content-type": "image/jpeg", "cache-control": "3600", "upsert": "true"}
+            )
+
+            # Yükleme başarılı, public URL'i oluşturup döndür
+            supabase_url = os.getenv("SUPABASE_URL")
+            public_url = f"{supabase_url}/storage/v1/object/public/fighter-images/{file_name}"
+            cls._logger.info(f"Image successfully uploaded: {public_url}")
+            return public_url
+
+        except Exception as e:
+            # Not: 'upsert=True' kullandığımız için "Duplicate" hatası almamalıyız.
+            cls._logger.error(f"Failed to upload image {file_name}: {e}")
+            return None
 
     # ──────────────────────────────────────────────────────────
     # PARTICIPATION OPERATIONS (Composite Key - Bileşik Anahtar)
@@ -139,7 +180,7 @@ class SupabaseManager:
         """Bileşik anahtara (fight_id, fighter_id) göre 'get' yapar."""
         try:
             client = await cls.get_client()
-            response = await client.table("participations").select("*") \
+            response = await client.table("participants").select("*") \
                 .eq("fight_id", fight_id) \
                 .eq("fighter_id", fighter_id) \
                 .single().execute()
@@ -156,7 +197,7 @@ class SupabaseManager:
     async def insert_participation(cls, participation_data: dict):
         try:
             client = await cls.get_client()
-            await client.table("participations").insert(participation_data).execute()
+            await client.table("participants").insert(participation_data).execute()
         except Exception as e:
             cls._logger.error(f"Failed to insert participation {participation_data.get('fight_id')}: {e}")
 
@@ -164,7 +205,7 @@ class SupabaseManager:
     async def update_participation(cls, fight_id: str, fighter_id: str, participation_data: dict):
         try:
             client = await cls.get_client()
-            await client.table("participations").update(participation_data) \
+            await client.table("participants").update(participation_data) \
                 .eq("fight_id", fight_id) \
                 .eq("fighter_id", fighter_id).execute()
         except Exception as e:

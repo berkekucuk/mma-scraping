@@ -5,14 +5,14 @@ from ..services.supabase_manager import SupabaseManager
 
 class FightSpider(scrapy.Spider):
 
-    name = "ufc_fights"
+    name = "fight"
     allowed_domains = ["tapology.com"]
 
     def __init__(self, *args, **kwargs):
         super(FightSpider, self).__init__(*args, **kwargs)
         self.supabase = SupabaseManager
 
-    async def start_requests(self):
+    async def start(self):
         # Supabase'den upcoming eventleri al
         upcoming_events = await self.supabase.get_upcoming_events()
 

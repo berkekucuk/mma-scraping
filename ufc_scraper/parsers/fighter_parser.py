@@ -58,7 +58,7 @@ class FighterParser:
     @staticmethod
     def extract_detail(container, label):
         value = container.xpath(f'.//strong[contains(text(), "{label}")]/following-sibling::span[1]/text()').get(default="").strip()
-        return value if value else None
+        return value if (value and value != 'N/A') else None
 
     @staticmethod
     def extract_reach(container):
