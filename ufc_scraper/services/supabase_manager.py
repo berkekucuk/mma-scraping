@@ -144,33 +144,6 @@ class SupabaseManager:
         except Exception as e:
             cls._logger.error(f"Failed to update fighter {fighter_id}: {e}")
 
-    @classmethod
-    async def upload_fighter_image(cls, file_name: str, file_body: bytes) -> str | None:
-        """
-        Bir resim dosyasını (bytes) Supabase Storage'a yükler ve public URL'ini döndürür.
-        """
-        try:
-            client = await cls.get_client()
-
-            # 'file_options' ile 'upsert=True' diyoruz.
-            # Bu, "eğer dosya varsa üzerine yaz, yoksa oluştur" demektir.
-            await client.storage.from_("fighter-images").upload(
-                path=file_name,
-                file=file_body,
-                file_options={"content-type": "image/jpeg", "cache-control": "3600", "upsert": "true"}
-            )
-
-            # Yükleme başarılı, public URL'i oluşturup döndür
-            supabase_url = os.getenv("SUPABASE_URL")
-            public_url = f"{supabase_url}/storage/v1/object/public/fighter-images/{file_name}"
-            cls._logger.info(f"Image successfully uploaded: {public_url}")
-            return public_url
-
-        except Exception as e:
-            # Not: 'upsert=True' kullandığımız için "Duplicate" hatası almamalıyız.
-            cls._logger.error(f"Failed to upload image {file_name}: {e}")
-            return None
-
     # ──────────────────────────────────────────────────────────
     # PARTICIPATION OPERATIONS (Composite Key - Bileşik Anahtar)
     # ──────────────────────────────────────────────────────────

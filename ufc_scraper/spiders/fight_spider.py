@@ -32,13 +32,3 @@ class FightSpider(scrapy.Spider):
                     cb_kwargs={"event_id": event_id}
                     )
 
-    def is_fighter_complete(self, fighter):
-        core_fields = ['date_of_birth', 'height', 'reach', 'born']
-
-        # En az bir tanesi doluysa → complete
-        for field in core_fields:
-            value = fighter.get(field)
-            if value not in (None, "", "N/A", "-", "—"):
-                return True
-
-        return False
