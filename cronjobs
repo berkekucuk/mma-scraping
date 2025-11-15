@@ -1,4 +1,4 @@
-*/3 * * * 6,0 cd /app && /usr/local/bin/python run_live_scraper.py >> /app/logs/live_events.log 2>&1
+*/10 * * * 6,0 cd /app && /usr/local/bin/python run_live_scraper.py >> /app/logs/live_events.log 2>&1
 
 15 * * * * cd /app && /usr/local/bin/scrapy crawl smart --loglevel INFO >> /app/logs/uncompleted_events.log 2>&1
 
