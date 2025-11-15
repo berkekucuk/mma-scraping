@@ -11,6 +11,7 @@ from ..utils.status_parser import StatusParser
 
 logger = logging.getLogger(__name__)
 
+
 class EventPageParser:
 
     @staticmethod
@@ -52,7 +53,6 @@ class EventPageParser:
         # Parse cancelled fights
         for cancelled_fight in cancelled_fights:
             yield from CancelledFightParser.parse_cancelled_fight(cancelled_fight, response, event_id)
-
 
     @staticmethod
     def parse_single_fight(fight, response, event_id, auto_index):

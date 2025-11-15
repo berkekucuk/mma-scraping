@@ -3,6 +3,7 @@ from ..utils.url_parser import UrlParser
 from ..services.supabase_manager import SupabaseManager
 from ..parsers.event_page_parser import EventPageParser
 
+
 class SmartSpider(scrapy.Spider):
 
     name = "smart"
@@ -19,13 +20,11 @@ class SmartSpider(scrapy.Spider):
 
     async def start(self):
         if self.event_id and self.event_url:
-            # (LIVE) MOD
+            # LIVE MOD
             # trigger by run_live_scraper.py
             self.logger.info(f"[LIVE MODE] Scraping single event: {self.event_id}")
             yield scrapy.Request(
-                url=self.event_url,
-                callback=self.parse_live_event,
-                cb_kwargs={"event_id": self.event_id, "event_url": self.event_url}
+                url=self.event_url, callback=self.parse_live_event, cb_kwargs={"event_id": self.event_id, "event_url": self.event_url}
             )
 
         else:
@@ -40,7 +39,6 @@ class SmartSpider(scrapy.Spider):
 
         self.logger.debug(f"Parsing event status for {event_id}")
         yield from EventPageParser.parse_card(response, event_id, event_url)
-
 
     async def parse_uncompleted_events(self, response):
 
@@ -78,4 +76,3 @@ class SmartSpider(scrapy.Spider):
                 )
             else:
                 self.logger.debug(f"Event {event_id} is already completed. Skipping.")
-

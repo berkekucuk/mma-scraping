@@ -5,6 +5,7 @@ from scrapy.exceptions import DropItem
 from .services.supabase_manager import SupabaseManager
 from .parsers.fighter_page_parser import FighterPageParser
 
+
 class DatabasePipeline:
 
     def __init__(self):
@@ -39,14 +40,14 @@ class DatabasePipeline:
             self.logger.error(f"Error processing item_type '{item_type}': {e}", exc_info=True)
         return item
 
-
     async def _process_event(self, adapter: ItemAdapter):
         event_id = adapter.get("event_id")
         if not event_id:
             self.logger.warning("[EVENT] EventItem has no event_id. Skipping.")
             return
 
-        event_data = adapter.asdict(); event_data.pop("item_type", None)
+        event_data = adapter.asdict()
+        event_data.pop("item_type", None)
         existing = await self.supabase.get_event_by_id(event_id)
         if existing == "invalid":
             return
@@ -60,14 +61,14 @@ class DatabasePipeline:
         else:
             self.logger.debug(f"[EVENT] No changes detected for event: {event_id}")
 
-
     async def _process_fight(self, adapter: ItemAdapter):
         fight_id = adapter.get("fight_id")
         if not fight_id:
             self.logger.warning("[FIGHT] FightItem has no fight_id. Skipping.")
             return
 
-        fight_data = adapter.asdict(); fight_data.pop("item_type", None)
+        fight_data = adapter.asdict()
+        fight_data.pop("item_type", None)
         existing = await self.supabase.get_fight_by_id(fight_id)
         if existing == "invalid":
             return
@@ -80,7 +81,6 @@ class DatabasePipeline:
             await self.supabase.update_fight(fight_id, fight_data)
         else:
             self.logger.debug(f"[FIGHT] No changes for fight: {fight_id}")
-
 
     # ❗❗ _process_fighter METODUNUN SADE HALİ (GÜNCELLEME YOK) ❗❗
     async def _process_fighter(self, adapter: ItemAdapter, spider):
@@ -101,17 +101,13 @@ class DatabasePipeline:
 
         if existing:
             self.logger.debug(f"[FIGHTER] Fighter {fighter_id} already exists. Skipping.")
-            self.processed_fighter_ids.add(fighter_id) # İşi bitti olarak işaretle
+            self.processed_fighter_ids.add(fighter_id)  # İşi bitti olarak işaretle
             return
 
         # === 3. DÖVÜŞÇÜ YENİ (DB'de yok) ===
 
         # Gelen veri eksik mi? (date_of_birth, born, fighting_out_of HEPSİ boşsa eksiktir)
-        is_incomplete_data = (
-            not adapter.get("date_of_birth") and
-            not adapter.get("born") and
-            not adapter.get("fighting_out_of")
-        )
+        is_incomplete_data = not adapter.get("date_of_birth") and not adapter.get("born") and not adapter.get("fighting_out_of")
 
         fighter_data = adapter.asdict()
         fighter_data.pop("item_type", None)
@@ -134,8 +130,8 @@ class DatabasePipeline:
                         "fighter_id": fighter_id,
                         "name": adapter.get("name"),
                         "profile_url": profile_url,
-                        "image_url": adapter.get("image_url")
-                    }
+                        "image_url": adapter.get("image_url"),
+                    },
                 )
                 spider.crawler.engine.crawl(request)
 
@@ -150,14 +146,15 @@ class DatabasePipeline:
             self.profile_scrape_scheduled.discard(fighter_id)
             return
 
-
     async def _process_participation(self, adapter: ItemAdapter):
-        fight_id = adapter.get("fight_id"); fighter_id = adapter.get("fighter_id")
+        fight_id = adapter.get("fight_id")
+        fighter_id = adapter.get("fighter_id")
         if not fight_id or not fighter_id:
             self.logger.warning("[PARTICIPATION] ParticipationItem is missing key IDs. Skipping.")
             return
 
-        participation_data = adapter.asdict(); participation_data.pop("item_type", None)
+        participation_data = adapter.asdict()
+        participation_data.pop("item_type", None)
         existing = await self.supabase.get_participation(fight_id, fighter_id)
         if existing == "invalid":
             return
@@ -170,7 +167,6 @@ class DatabasePipeline:
             await self.supabase.update_participation(fight_id, fighter_id, participation_data)
         else:
             self.logger.debug(f"[PARTICIPATION] No changes for participation: {fight_id}/{fighter_id}")
-
 
     def _has_changes(self, new_data: dict, old_data: dict) -> bool:
         for key in new_data.keys():

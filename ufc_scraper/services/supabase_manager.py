@@ -25,9 +25,9 @@ class SupabaseManager:
                 raise ValueError("SUPABASE_URL and SUPABASE_KEY are required")
 
             try:
-                # 'acreate_client' (async create) kullanılıyor
                 cls._instance = await acreate_client(supabase_url, supabase_key)
                 cls._logger.info("Supabase client initialized (Async)")
+
             except Exception as e:
                 cls._logger.error(f"Failed to initialize Supabase client: {e}")
                 raise
@@ -43,13 +43,14 @@ class SupabaseManager:
             client = await cls.get_client()
             response = await client.table(table_name).select("*").eq(id_column, id_value).single().execute()
             return response.data
+
         except Exception as e:
             if "PGRST116" in str(e) or "0 rows" in str(e):
                 cls._logger.debug(f"[{table_name}] Item not found in DB: {id_value}")
                 return None  # Hata değil, 'yok' anlamına gelir
 
             cls._logger.error(f"Unexpected error getting {table_name} {id_value}: {e}")
-            return "invalid" # Gerçek bir veritabanı hatası
+            return "invalid"  # Gerçek bir veritabanı hatası
 
     # ──────────────────────────────────────────────────────────
     # EVENT OPERATIONS
@@ -63,42 +64,47 @@ class SupabaseManager:
     async def get_upcoming_events(cls):
         try:
             client = await cls.get_client()
-            response = await client.table("events").select("event_id, event_url") \
-                .eq("status", "Upcoming") \
-                .execute()
-
+            response = await client.table("events").select("event_id, event_url").eq("status", "Upcoming").execute()
             return response.data
+
         except Exception as e:
             cls._logger.error(f"Failed to get upcoming events: {e}")
             return None
 
     @classmethod
-    async def get_live_events(cls):
+    async def get_live_event(cls):
         """
-        bring all events whose start time (datetime_utc) has passed AND
-        whose status is not yet 'Completed'.
-        This ensures that an event is scraped every minute until it is 'Completed',
-        regardless of whether it is 'Upcoming' or 'Live'.
+        Fetch a single live event that is currently ongoing or recently started.
+        An event is considered 'live' if its status is not 'Completed' and its datetime_utc
+        is within the last 12 hours up to now.
         """
         try:
             client = await cls.get_client()
-
-            response = await client.table("events").select("event_id, event_url") \
-                .neq("status", "Completed") \
-                .lte("datetime_utc", "now()") \
-                .gte("datetime_utc", "now() - '12 hours'::interval") \
+            response = (
+                await client.table("events")
+                .select("event_id, event_url")
+                .neq("status", "Completed")
+                .lte("datetime_utc", "now()")
+                .gte("datetime_utc", "now() - '12 hours'::interval")
+                .single()
                 .execute()
-
+            )
             return response.data
+
         except Exception as e:
-            cls._logger.error(f"Failed to get LIVE events: {e}")
-            return []
+            if "PGRST116" in str(e) or "0 rows" in str(e):
+                cls._logger.debug("No live event found (PGRST116).")
+                return None
+
+            cls._logger.error(f"Failed to get LIVE event: {e}")
+            return None
 
     @classmethod
     async def insert_event(cls, event_data: dict):
         try:
             client = await cls.get_client()
             await client.table("events").insert(event_data).execute()
+
         except Exception as e:
             cls._logger.error(f"Failed to insert event {event_data.get('event_id')}: {e}")
 
@@ -107,6 +113,7 @@ class SupabaseManager:
         try:
             client = await cls.get_client()
             await client.table("events").update(event_data).eq("event_id", event_id).execute()
+
         except Exception as e:
             cls._logger.error(f"Failed to update event {event_id}: {e}")
 
@@ -123,6 +130,7 @@ class SupabaseManager:
         try:
             client = await cls.get_client()
             await client.table("fights").insert(fight_data).execute()
+
         except Exception as e:
             cls._logger.error(f"Failed to insert fight {fight_data.get('fight_id')}: {e}")
 
@@ -131,6 +139,7 @@ class SupabaseManager:
         try:
             client = await cls.get_client()
             await client.table("fights").update(fight_data).eq("fight_id", fight_id).execute()
+
         except Exception as e:
             cls._logger.error(f"Failed to update fight {fight_id}: {e}")
 
@@ -147,6 +156,7 @@ class SupabaseManager:
         try:
             client = await cls.get_client()
             await client.table("fighters").insert(fighter_data).execute()
+
         except Exception as e:
             cls._logger.error(f"Failed to insert fighter {fighter_data.get('fighter_id')}: {e}")
 
@@ -155,6 +165,7 @@ class SupabaseManager:
         try:
             client = await cls.get_client()
             await client.table("fighters").update(fighter_data).eq("fighter_id", fighter_id).execute()
+
         except Exception as e:
             cls._logger.error(f"Failed to update fighter {fighter_id}: {e}")
 
@@ -166,11 +177,11 @@ class SupabaseManager:
     async def get_participation(cls, fight_id: str, fighter_id: str):
         try:
             client = await cls.get_client()
-            response = await client.table("participants").select("*") \
-                .eq("fight_id", fight_id) \
-                .eq("fighter_id", fighter_id) \
-                .single().execute()
+            response = (
+                await client.table("participants").select("*").eq("fight_id", fight_id).eq("fighter_id", fighter_id).single().execute()
+            )
             return response.data
+
         except Exception as e:
             if "PGRST116" in str(e) or "0 rows" in str(e):
                 cls._logger.debug(f"[PARTICIPATION] Item not found: {fight_id}/{fighter_id}")
@@ -184,6 +195,7 @@ class SupabaseManager:
         try:
             client = await cls.get_client()
             await client.table("participants").insert(participation_data).execute()
+
         except Exception as e:
             cls._logger.error(f"Failed to insert participation {participation_data.get('fight_id')}: {e}")
 
@@ -191,8 +203,7 @@ class SupabaseManager:
     async def update_participation(cls, fight_id: str, fighter_id: str, participation_data: dict):
         try:
             client = await cls.get_client()
-            await client.table("participants").update(participation_data) \
-                .eq("fight_id", fight_id) \
-                .eq("fighter_id", fighter_id).execute()
+            await client.table("participants").update(participation_data).eq("fight_id", fight_id).eq("fighter_id", fighter_id).execute()
+
         except Exception as e:
             cls._logger.error(f"Failed to update participation {fight_id}/{fighter_id}: {e}")
