@@ -82,16 +82,18 @@ class SupabaseManager:
         try:
             client = await cls.get_client()
 
-            # Python tarafında datetime hesaplaması
             now = datetime.now(timezone.utc)
             twelve_hours_ago = now - timedelta(hours=12)
+
+            now_str = now.replace(microsecond=0).isoformat()
+            twelve_hours_ago_str = twelve_hours_ago.replace(microsecond=0).isoformat()
 
             response = (
                 await client.table("events")
                 .select("event_id, event_url")
                 .neq("status", "Completed")
-                .lte("datetime_utc", now.isoformat())
-                .gte("datetime_utc", twelve_hours_ago.isoformat())
+                .lte("datetime_utc", now_str)
+                .gte("datetime_utc", twelve_hours_ago_str)
                 .single()
                 .execute()
             )
