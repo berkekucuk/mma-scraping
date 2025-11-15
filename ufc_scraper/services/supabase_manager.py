@@ -6,10 +6,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class SupabaseManager:
-    """
-    Tüm Supabase işlemlerini yöneten asenkron Singleton sınıfı.
-    Java'daki 'static' bir DAO/Repository sınıfına benzer.
-    """
 
     _instance: AsyncClient = None
     _logger = logging.getLogger(__name__)
@@ -17,8 +13,8 @@ class SupabaseManager:
     @classmethod
     async def get_client(cls) -> AsyncClient:
         """
-        Asenkron Supabase istemcisini (client) başlatır veya
-        mevcut olanı döndürür (Singleton pattern).
+        initializes async supabase client if not already done,
+        or return the existing one (Singleton pattern).
         """
         if cls._instance is None:
             supabase_url = os.getenv("SUPABASE_URL")
@@ -41,8 +37,7 @@ class SupabaseManager:
     @classmethod
     async def _get_by_id(cls, table_name: str, id_column: str, id_value: str):
         """
-        Tekil ID'ye göre 'get' işlemi yapan genel yardımcı metot.
-        PGRST116 hatasını (0 satır) 'None' olarak ele alır.
+        General helper method to perform a 'get' operation by unique ID.
         """
         try:
             client = await cls.get_client()
@@ -66,9 +61,6 @@ class SupabaseManager:
 
     @classmethod
     async def get_upcoming_events(cls):
-        """
-        'events' tablosundan status'u 'Upcoming' olan tüm etkinlikleri getirir.
-        """
         try:
             client = await cls.get_client()
             response = await client.table("events").select("event_id, event_url") \
@@ -78,7 +70,29 @@ class SupabaseManager:
             return response.data
         except Exception as e:
             cls._logger.error(f"Failed to get upcoming events: {e}")
-            return None # Hata durumunda boş liste döndür
+            return None
+
+    @classmethod
+    async def get_live_events(cls):
+        """
+        bring all events whose start time (datetime_utc) has passed AND
+        whose status is not yet 'Completed'.
+        This ensures that an event is scraped every minute until it is 'Completed',
+        regardless of whether it is 'Upcoming' or 'Live'.
+        """
+        try:
+            client = await cls.get_client()
+
+            response = await client.table("events").select("event_id, event_url") \
+                .neq("status", "Completed") \
+                .lte("datetime_utc", "now()") \
+                .gte("datetime_utc", "now() - '12 hours'::interval") \
+                .execute()
+
+            return response.data
+        except Exception as e:
+            cls._logger.error(f"Failed to get LIVE events: {e}")
+            return []
 
     @classmethod
     async def insert_event(cls, event_data: dict):
@@ -150,7 +164,6 @@ class SupabaseManager:
 
     @classmethod
     async def get_participation(cls, fight_id: str, fighter_id: str):
-        """Bileşik anahtara (fight_id, fighter_id) göre 'get' yapar."""
         try:
             client = await cls.get_client()
             response = await client.table("participants").select("*") \

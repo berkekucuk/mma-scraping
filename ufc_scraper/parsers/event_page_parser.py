@@ -6,28 +6,53 @@ from ..utils.odds_parser import OddsParser
 from ..utils.fighter_div_parser import FighterDivParser
 from ..utils.url_parser import UrlParser
 from ..utils.method_parser import MethodParser
+from ..utils.datetime_parser import DatetimeParser
+from ..utils.status_parser import StatusParser
 
 logger = logging.getLogger(__name__)
 
-class FightParser:
+class EventPageParser:
 
     @staticmethod
-    def parse_fights(response, event_id):
+    def parse_card(response, event_id, event_url):
+
+        logger.info(f"Parsing event: {event_id}")
+
+        status_string = response.css("div#eventPageHeader span::text").get(default="").strip()
+        status = StatusParser.parse(status_string)
+
+        name = response.css("h2::text").get(default="").strip()
+
+        container = response.css('ul[data-controller="unordered-list-background"]')
+
+        date_time_str = container.xpath(".//span[contains(text(), 'Date/Time')]/following-sibling::span/text()").get(default="").strip()
+        datetime_utc = DatetimeParser.parse_tapology_datetime(date_time_str)
+        venue = container.xpath(".//span[contains(text(), 'Venue')]/following-sibling::span/text()").get(default="").strip()
+        location = container.xpath(".//span[contains(text(), 'Location')]/following-sibling::span//text()").get(default="").strip()
+
+        yield ItemFactory.create_event_item(
+            event_id,
+            event_url,
+            name,
+            status,
+            datetime_utc,
+            venue,
+            location,
+        )
 
         fights = response.css('ul[data-event-view-toggle-target="list"] > li[data-controller="table-row-background"]')
-
         cancelled_fights = response.xpath('//div[starts-with(@id, "bout") and contains(@id, "Cancelled")]')
-
         total_fights = len(fights)
 
         # Parse normal fights
         for index, fight in enumerate(fights, start=1):
             fight_order_number = total_fights - index + 1
-            yield from FightParser.parse_single_fight(fight, response, event_id, fight_order_number)
+            yield from EventPageParser.parse_single_fight(fight, response, event_id, fight_order_number)
 
         # Parse cancelled fights
         for cancelled_fight in cancelled_fights:
             yield from CancelledFightParser.parse_cancelled_fight(cancelled_fight, response, event_id)
+
 
     @staticmethod
     def parse_single_fight(fight, response, event_id, auto_index):

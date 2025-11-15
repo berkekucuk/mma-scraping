@@ -3,4 +3,4 @@
 # Please refer to the documentation for information on how to create and manage
 # your spiders.
 
-from .event_spider import EventSpider
+from .smart_spider import SmartSpider

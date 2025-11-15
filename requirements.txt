@@ -66,6 +66,7 @@ StrEnum==0.4.15
 supabase==2.16.0
 supafunc==0.10.1
 tldextract==5.3.0
+tqdm==4.67.1
 Twisted==25.5.0
 typing-inspection==0.4.1
 typing_extensions==4.14.0

@@ -5,7 +5,7 @@ from ..utils.measurement_parser import MeasurementParser
 from ..items import FighterItem
 
 
-class FighterParser:
+class FighterPageParser:
 
     @staticmethod
     def parse_fighter_profile(response, fighter_id, name, profile_url, image_url):
@@ -13,24 +13,24 @@ class FighterParser:
         header = response.css("div#fighterPageHeader")
         container = response.css("div#standardDetails")
 
-        nickname = FighterParser.extract_detail(container, "Nickname:")
+        nickname = FighterPageParser.extract_detail(container, "Nickname:")
 
-        record_string = FighterParser.extract_detail(container, "Pro MMA Record:")
+        record_string = FighterPageParser.extract_detail(container, "Pro MMA Record:")
         record = RecordParser.parse_record(record_string)
 
-        date_of_birth_string = FighterParser.extract_detail(container, "Date of Birth:")
+        date_of_birth_string = FighterPageParser.extract_detail(container, "Date of Birth:")
         date_of_birth = DateParser.parse_date_to_iso(date_of_birth_string)
 
-        height_string = FighterParser.extract_detail(container, "Height:")
+        height_string = FighterPageParser.extract_detail(container, "Height:")
         height = MeasurementParser.parse_measurement(height_string)
 
-        reach_string = FighterParser.extract_reach(container)
+        reach_string = FighterPageParser.extract_reach(container)
         reach = MeasurementParser.parse_measurement(reach_string)
 
-        weight_class_name = FighterParser.extract_detail(container, "Weight Class:") or None
-        born = FighterParser.extract_detail(container, "Born:") or None
-        fighting_out_of = FighterParser.extract_detail(container, "Fighting out of:") or None
-        style = FighterParser.extract_detail(container, "Foundation Style:") or None
+        weight_class_name = FighterPageParser.extract_detail(container, "Weight Class:") or None
+        born = FighterPageParser.extract_detail(container, "Born:") or None
+        fighting_out_of = FighterPageParser.extract_detail(container, "Fighting out of:") or None
+        style = FighterPageParser.extract_detail(container, "Foundation Style:") or None
 
         country_flag_relative_url = header.css("img::attr(src)").get(default="").strip()
         country_flag_url = response.urljoin(country_flag_relative_url)

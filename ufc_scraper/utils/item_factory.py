@@ -1,7 +1,21 @@
-from ..items import FightItem, FightParticipationItem, FighterItem
+from ..items import EventItem, FightItem, FightParticipationItem, FighterItem
 
 
 class ItemFactory:
+
+    @staticmethod
+    def create_event_item(event_id, event_url, name, status, datetime_utc, venue, location):
+
+        event_item = EventItem()
+        event_item["item_type"] = "event"
+        event_item["event_id"] = event_id
+        event_item["event_url"] = event_url
+        event_item["name"] = name
+        event_item["status"] = status
+        event_item["datetime_utc"] = datetime_utc
+        event_item["venue"] = venue
+        event_item["location"] = location
+        return event_item
 
     @staticmethod
     def create_fight_item(fight_metadata, event_id, fight_summary):
