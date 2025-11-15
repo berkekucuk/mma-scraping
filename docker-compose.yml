@@ -3,6 +3,7 @@ version: '3.8'
 services:
   ufc-scraper:
     build: .
+    image: ufc-scraper:1.0
     container_name: ufc-scraper
     env_file:
       - .env
