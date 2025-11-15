@@ -1,44 +1,26 @@
-# 1. Adım: Temel İmaj (Base Image)
-# 'slim' versiyonu, production için daha küçük ve güvenlidir.
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# 2. Adım: Sistem Bağımlılıklarını Kur
-# cron -> Zamanlayıcı (crontab) için
-# postgresql-client -> pg_dump, psql gibi komutlar için (yedekleme vb.)
-RUN apt-get update && apt-get install -y \
-    cron \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# Zaman dilimi için istersen:
+ENV TZ=Europe/Istanbul
 
-# 3. Adım: Çalışma Dizinini Ayarla
-# Koddaki tüm yolların (örn: '/app/logs') çalışması için
+# Sistem paketleri: cron
+RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# 4. Adım: Python Bağımlılıklarını Kur
-# Önce SADECE requirements.txt'yi kopyala (Docker önbelleği için en verimli yöntem)
+# Python bağımlılıkları
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Adım: Proje Kodunu Kopyala
-# Kalan tüm proje dosyalarını (/app dizinine) kopyala
-# (.dockerignore sayesinde .env, .git, venv gibi dosyalar atlanacak)
+# Proje dosyalarını kopyala
 COPY . .
 
-# 6. Adım: Cron (Zamanlayıcı) Kurulumu
-# Proje dizinimizdeki 'scraper.crontab' dosyasını,
-# cron'un okuyacağı '/etc/cron.d/' dizinine kopyala
-COPY scraper.crontab /etc/cron.d/scraper-cron
-
-# Crontab dosyasına doğru dosya izinlerini ver
-RUN chmod 0644 /etc/cron.d/scraper-cron
-
-# 7. Adım: Log Dosyalarını ve Dizinini Oluştur
-# Cron'un log yazabilmesi için 'logs' dizinini ve boş log dosyalarını oluştur
+# Log klasörünü oluştur
 RUN mkdir -p /app/logs
-RUN touch /app/logs/cron.log
-RUN touch /app/logs/full_scrape.log
 
-# 8. Adım: Konteyner Başlangıç Komutu
-# Konteyner başladığında cron servisini başlat
-# ve 'tail -f' komutu ile log dosyasını takip ederek konteynerin kapanmasını engelle
-CMD cron && tail -f /app/logs/cron.log
+# Cron job'ları yükle
+# cronjobs dosyası user crontab formatında olduğu için direkt crontab'e yükleyeceğiz
+RUN crontab /app/cronjobs
+
+# cron'u foreground'da çalıştır (Docker container exit olmasın)
+CMD ["cron", "-f"]

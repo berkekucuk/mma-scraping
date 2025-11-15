@@ -1,0 +1,4 @@
+*/3 * * * 6,0 /usr/local/bin/python /app/run_live_scraper.py >> /app/logs/cron.log 2>&1
+15 * * * * cd /app && /usr/local/bin/scrapy crawl smart --logfile /app/logs/full_scrape.log 2>&1
+
+# Bu satırı silmeyin.
