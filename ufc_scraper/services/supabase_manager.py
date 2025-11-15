@@ -1,3 +1,4 @@
+from datetime import timedelta, timezone, datetime
 import os
 import logging
 from supabase import acreate_client, AsyncClient
@@ -80,12 +81,17 @@ class SupabaseManager:
         """
         try:
             client = await cls.get_client()
+
+            # Python tarafında datetime hesaplaması
+            now = datetime.now(timezone.utc)
+            twelve_hours_ago = now - timedelta(hours=12)
+
             response = (
                 await client.table("events")
                 .select("event_id, event_url")
                 .neq("status", "Completed")
-                .lte("datetime_utc", "now()")
-                .gte("datetime_utc", "now() - '12 hours'::interval")
+                .lte("datetime_utc", now.isoformat())
+                .gte("datetime_utc", twelve_hours_ago.isoformat())
                 .single()
                 .execute()
             )

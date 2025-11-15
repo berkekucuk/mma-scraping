@@ -13,4 +13,3 @@ venv/
 
 logs/
 *.log
-.env
