@@ -16,7 +16,7 @@ class SmartSpider(scrapy.Spider):
         # Parameters for live mode
         self.event_id = kwargs.get('event_id')
         self.event_url = kwargs.get('event_url')
-        # ==========================================
+
 
     async def start(self):
         if self.event_id and self.event_url:
@@ -32,13 +32,14 @@ class SmartSpider(scrapy.Spider):
             # trigger by 'scrapy crawl event' command
             self.logger.info("[FULL MODE] Starting full event pagination scrape...")
             url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page=1"
-            yield scrapy.Request(url, callback=self.parse_uncompleted_events)
-        # ==================================
+            yield scrapy.Request(url=url, callback=self.parse_uncompleted_events)
+
 
     def parse_live_event(self, response, event_id, event_url):
 
         self.logger.debug(f"Parsing event status for {event_id}")
-        yield from EventPageParser.parse_card(response, event_id, event_url)
+        yield from EventPageParser.parse_card(response, event_id, event_url, is_live_mode=True)
+
 
     async def parse_uncompleted_events(self, response):
 
@@ -65,7 +66,7 @@ class SmartSpider(scrapy.Spider):
 
             existing_event = await self.supabase.get_event_by_id(event_id)
 
-            if not existing_event or existing_event.get("status") != "Completed":
+            if not existing_event or existing_event.get("status") == "Upcoming":
 
                 self.logger.info(f"Event {event_id} is new or not completed. Scheduling full page scrape.")
 

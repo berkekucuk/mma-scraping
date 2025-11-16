@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class EventPageParser:
 
     @staticmethod
-    def parse_card(response, event_id, event_url):
+    def parse_card(response, event_id, event_url, is_live_mode=False):
 
         logger.info(f"Parsing event: {event_id}")
 
@@ -48,14 +48,14 @@ class EventPageParser:
         # Parse normal fights
         for index, fight in enumerate(fights, start=1):
             fight_order_number = total_fights - index + 1
-            yield from EventPageParser.parse_single_fight(fight, response, event_id, fight_order_number)
+            yield from EventPageParser.parse_single_fight(fight, response, event_id, fight_order_number, is_live_mode)
 
-        # Parse cancelled fights
-        for cancelled_fight in cancelled_fights:
-            yield from CancelledFightParser.parse_cancelled_fight(cancelled_fight, response, event_id)
+        if not is_live_mode:
+            for cancelled_fight in cancelled_fights:
+                yield from CancelledFightParser.parse_cancelled_fight(cancelled_fight, response, event_id)
 
     @staticmethod
-    def parse_single_fight(fight, response, event_id, auto_index):
+    def parse_single_fight(fight, response, event_id, auto_index, is_live_mode=False):
         web_view = fight.xpath("./div[1]")
 
         ### Fight summary ###
@@ -114,8 +114,9 @@ class EventPageParser:
             fight_summary,
         )
 
-        for fighter_item in ItemFactory.create_fighter_items(fighter1_data, fighter2_data):
-            yield fighter_item
+        if not is_live_mode:
+            for fighter_item in ItemFactory.create_fighter_items(fighter1_data, fighter2_data):
+                yield fighter_item
 
         for participation_item in ItemFactory.create_participation_items(
             fight_metadata["fight_id"],
