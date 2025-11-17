@@ -32,3 +32,12 @@ class UrlParser:
 
         except (IndexError, AttributeError):
             return None
+
+    @staticmethod
+    def extract_country_code(url):
+        if not url:
+            return None
+
+        filename = url.split('/')[-1]
+        country_code = filename.split('-')[0]
+        return country_code

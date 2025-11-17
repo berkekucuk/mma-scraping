@@ -46,14 +46,12 @@ class OddsParser:
 
         odds_str = odds_str.strip()
 
-        # Regex ile sayısal değer ve parantez içini yakala
         match = re.match(r"([+-]?\d+)\s*\(([^)]+)\)", odds_str)
         if match:
             value = int(match.group(1))
             label = match.group(2).strip()
             return {"odds_value": value, "odds_label": label}
 
-        # Eğer parantez yoksa sadece sayıyı döndür
         try:
             value = int(odds_str)
             return {"odds_value": value, "odds_label": None}

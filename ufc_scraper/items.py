@@ -54,6 +54,5 @@ class FightParticipationItem(scrapy.Item):
     fighter_id = scrapy.Field()  # FK -> FighterItem
     odds_value = scrapy.Field()
     odds_label = scrapy.Field()
-    age_at_fight = scrapy.Field()
     result = scrapy.Field()
     record_after_fight = scrapy.Field()

@@ -6,7 +6,7 @@ import logging
 class DatetimeParser:
 
     @staticmethod
-    def parse_tapology_datetime(date_time_str: str | None) -> str | None:
+    def parse(date_time_str: str) -> str | None:
 
         if not date_time_str:
             return None
@@ -16,7 +16,6 @@ class DatetimeParser:
 
             tzinfos = {"ET": eastern}
 
-            # 'date_time_str' parse edilirken tzinfos kullanılır
             dt = parser.parse(date_time_str, fuzzy=True, tzinfos=tzinfos)
 
             if dt.tzinfo is None:
@@ -28,5 +27,5 @@ class DatetimeParser:
             return dt_utc.isoformat()
 
         except Exception as e:
-            logging.error(f"'{date_time_str}' parse edilirken hata oluştu: {e}")
+            logging.error(f"'{date_time_str}' An error occurred while parsing: {e}")
             return None

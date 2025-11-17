@@ -63,17 +63,6 @@ class SupabaseManager:
         return await cls._get_by_id("events", "event_id", event_id)
 
     @classmethod
-    async def get_upcoming_events(cls):
-        try:
-            client = await cls.get_client()
-            response = await client.table("events").select("event_id, event_url").eq("status", "Upcoming").execute()
-            return response.data
-
-        except Exception as e:
-            cls._logger.error(f"Failed to get upcoming events: {e}")
-            return None
-
-    @classmethod
     async def get_live_event(cls):
         """
         Fetch a live event occurring within the last 12 hours.

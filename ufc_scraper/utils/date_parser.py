@@ -4,7 +4,7 @@ from datetime import datetime
 class DateParser:
 
     @staticmethod
-    def parse_date_to_iso(date_string):
+    def parse_date_to_iso(date_str):
         """
         Parse date string to ISO format (YYYY-MM-DD)
 
@@ -17,11 +17,11 @@ class DateParser:
         Returns:
             str: ISO formatted date (YYYY-MM-DD) or None
         """
-        if not date_string or date_string.strip() == "" or date_string.upper() == "N/A":
+        if not date_str or date_str.strip() == "" or date_str.upper() == "N/A":
             return None
 
         # Clean the string
-        date_string = date_string.strip()
+        date_str = date_str.strip()
 
         # Try different date formats
         date_formats = [
@@ -34,7 +34,7 @@ class DateParser:
 
         for fmt in date_formats:
             try:
-                parsed_date = datetime.strptime(date_string, fmt)
+                parsed_date = datetime.strptime(date_str, fmt)
                 return parsed_date.strftime('%Y-%m-%d')
             except ValueError:
                 continue

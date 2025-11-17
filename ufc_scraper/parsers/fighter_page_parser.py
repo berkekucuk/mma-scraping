@@ -1,6 +1,6 @@
 from ..utils.date_parser import DateParser
-from ..utils.record_parser import RecordParser
-from ..utils.country_parser import CountryParser
+from ..utils.total_record_parser import TotalRecordParser
+from ..utils.url_parser import UrlParser
 from ..utils.measurement_parser import MeasurementParser
 from ..items import FighterItem
 
@@ -15,26 +15,26 @@ class FighterPageParser:
 
         nickname = FighterPageParser.extract_detail(container, "Nickname:")
 
-        record_string = FighterPageParser.extract_detail(container, "Pro MMA Record:")
-        record = RecordParser.parse_record(record_string)
+        record_str = FighterPageParser.extract_detail(container, "Pro MMA Record:")
+        record = TotalRecordParser.parse_total_record(record_str)
 
-        date_of_birth_string = FighterPageParser.extract_detail(container, "Date of Birth:")
-        date_of_birth = DateParser.parse_date_to_iso(date_of_birth_string)
+        date_of_birth_str = FighterPageParser.extract_detail(container, "Date of Birth:")
+        date_of_birth = DateParser.parse_date_to_iso(date_of_birth_str)
 
-        height_string = FighterPageParser.extract_detail(container, "Height:")
-        height = MeasurementParser.parse_measurement(height_string)
+        height_str = FighterPageParser.extract_detail(container, "Height:")
+        height = MeasurementParser.parse_measurement(height_str)
 
-        reach_string = FighterPageParser.extract_reach(container)
-        reach = MeasurementParser.parse_measurement(reach_string)
+        reach_str = FighterPageParser.extract_reach(container)
+        reach = MeasurementParser.parse_measurement(reach_str)
 
-        weight_class_name = FighterPageParser.extract_detail(container, "Weight Class:") or None
-        born = FighterPageParser.extract_detail(container, "Born:") or None
-        fighting_out_of = FighterPageParser.extract_detail(container, "Fighting out of:") or None
-        style = FighterPageParser.extract_detail(container, "Foundation Style:") or None
+        weight_class_name = FighterPageParser.extract_detail(container, "Weight Class:")
+        born = FighterPageParser.extract_detail(container, "Born:")
+        fighting_out_of = FighterPageParser.extract_detail(container, "Fighting out of:")
+        style = FighterPageParser.extract_detail(container, "Foundation Style:")
 
-        country_flag_relative_url = header.css("img::attr(src)").get(default="").strip()
-        country_flag_url = response.urljoin(country_flag_relative_url)
-        country_code = CountryParser.extract_country_src(country_flag_url)
+        country_flag_relative_url = header.css("img::attr(src)").get(default="").strip() or None
+        country_flag_url = response.urljoin(country_flag_relative_url) if country_flag_relative_url else None
+        country_code = UrlParser.extract_country_code(country_flag_url) if country_flag_url else None
 
         fighter_item = FighterItem()
         fighter_item["item_type"] = "fighter"

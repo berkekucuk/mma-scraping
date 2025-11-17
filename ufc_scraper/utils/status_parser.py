@@ -1,16 +1,15 @@
 class StatusParser:
 
     @staticmethod
-    def parse(status_string: str) -> str:
+    def parse(status_string: str) -> str | None:
 
         if not status_string:
             return None
 
-        # Trim
-        clean = status_string.strip()
-
-        if not clean:
+        if not status_string:
             return None
 
-        # İlk kelimeyi böl
-        return clean.split()[0]
+        if status_string.startswith("In Progress"):
+            return "Live"
+
+        return status_string.split()[0]

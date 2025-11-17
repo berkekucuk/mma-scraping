@@ -1,25 +1,12 @@
-import re
-
-
 class RecordParser:
 
     @staticmethod
-    def parse_record(record_string):
-        """
-        Parse record string like:
-        - "28-1-0, 1 NC (Win-Loss-Draw)"
-        - "3-4-0 (Win-Loss-Draw)"
+    def parse_record(record_after_fight_str):
 
-        Returns dict with wins, losses, draws
-        """
-        if not record_string or record_string.strip() == "" or record_string == "N/A":
-            return {"wins": 0, "losses": 0, "draws": 0}
+        parts = record_after_fight_str.split("-")
 
-        # Extract W-L-D from the first part (before comma or parenthesis)
-        record_part = record_string.split(',')[0].strip()
-        wld_match = re.match(r'(\d+)-(\d+)-(\d+)', record_part)
+        wins = int(parts[0]) if len(parts) > 0 else 0
+        losses = int(parts[1]) if len(parts) > 1 else 0
+        draws = int(parts[2]) if len(parts) > 2 else 0
 
-        if not wld_match:
-            return {"wins": 0, "losses": 0, "draws": 0}
-
-        return {"wins": int(wld_match.group(1)), "losses": int(wld_match.group(2)), "draws": int(wld_match.group(3))}
+        return {"wins": wins, "losses": losses, "draws": draws}

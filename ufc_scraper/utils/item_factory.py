@@ -53,28 +53,24 @@ class ItemFactory:
         fighter1_data,
         fighter2_data,
         odds_data=None,
-        ages_data=None,
         result1=None,
         result2=None,
     ):
 
         odds_data = odds_data or {}
-        ages_data = ages_data or {}
 
         items = []
-        for fighter_data, odds_value, odds_label, age, result in [
+        for fighter_data, odds_value, odds_label, result in [
             (
                 fighter1_data,
                 odds_data.get("fighter1_odds_value", None),
                 odds_data.get("fighter1_odds_label", None),
-                ages_data.get("fighter1_age", None),
                 result1 or fighter1_data.get("result"),
             ),
             (
                 fighter2_data,
                 odds_data.get("fighter2_odds_value", None),
                 odds_data.get("fighter2_odds_label", None),
-                ages_data.get("fighter2_age", None),
                 result2 or fighter2_data.get("result"),
             ),
         ]:
@@ -84,7 +80,6 @@ class ItemFactory:
             participation["fighter_id"] = fighter_data.get("fighter_id")
             participation["odds_value"] = odds_value
             participation["odds_label"] = odds_label
-            participation["age_at_fight"] = age
             participation["result"] = result
             participation["record_after_fight"] = fighter_data.get("record_after_fight")
             items.append(participation)
