@@ -167,7 +167,7 @@ class DatabasePipeline:
     def _has_changes(self, new_data: dict, old_data: dict) -> bool:
 
         JSONB_FIELDS = {'record', 'height', 'reach', 'record_after_fight'}
-        NUMERIC_FIELDS = {'weight_class_lbs', 'odds_value', 'age_at_fight', 'fight_order'}
+        NUMERIC_FIELDS = {'weight_class_lbs', 'odds_value', 'fight_order'}
         IGNORE_FIELDS = {'created_at', 'updated_at'}
 
         for key, new_value in new_data.items():

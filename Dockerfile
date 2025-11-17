@@ -12,8 +12,8 @@ COPY . .
 
 RUN mkdir -p /app/logs
 
-RUN touch /app/logs/uncompleted_events.log /app/logs/live_events.log
+RUN touch /app/logs/upcoming_events.log /app/logs/live_events.log
 
 RUN crontab /app/cronjobs
 
-CMD cron && tail -f /app/logs/uncompleted_events.log
+CMD cron && tail -f /app/logs/upcoming_events.log
