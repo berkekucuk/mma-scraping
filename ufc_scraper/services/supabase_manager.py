@@ -65,22 +65,15 @@ class SupabaseManager:
     @classmethod
     async def get_live_event(cls):
         """
-        Fetch a live event occurring within the last 12 hours.
+        Fetch the event that is currently marked as 'live' in the database.
         """
         try:
             client = await cls.get_client()
 
-            now = datetime.now(timezone.utc)
-            twelve_hours_ago = now - timedelta(hours=12)
-
-            now_str = now.replace(microsecond=0).isoformat()
-            twelve_hours_ago_str = twelve_hours_ago.replace(microsecond=0).isoformat()
-
             response = (
                 await client.table("events")
                 .select("event_id, event_url")
-                .lte("datetime_utc", now_str)
-                .gte("datetime_utc", twelve_hours_ago_str)
+                .eq("status", "live")
                 .limit(1)
                 .execute()
             )

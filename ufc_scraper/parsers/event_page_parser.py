@@ -30,15 +30,16 @@ class EventPageParser:
         venue = container.xpath(".//span[contains(text(), 'Venue')]/following-sibling::span/text()").get(default="").strip() or None
         location = container.xpath(".//span[contains(text(), 'Location')]/following-sibling::span//text()").get(default="").strip() or None
 
-        yield ItemFactory.create_event_item(
-            event_id,
-            event_url,
-            name,
-            status,
-            datetime_utc,
-            venue,
-            location,
-        )
+        if not is_live_mode:
+            yield ItemFactory.create_event_item(
+                event_id,
+                event_url,
+                name,
+                status,
+                datetime_utc,
+                venue,
+                location,
+            )
 
         fights = response.css('ul[data-event-view-toggle-target="list"] > li[data-controller="table-row-background"]')
         cancelled_fights = response.xpath('//div[starts-with(@id, "bout") and contains(@id, "Cancelled")]')
