@@ -26,6 +26,7 @@ class FightItem(scrapy.Item):
     round_summary = scrapy.Field()
     bout_type = scrapy.Field()
     weight_class_lbs = scrapy.Field()
+    weight_class_id = scrapy.Field()
     rounds_format = scrapy.Field()
     fight_order = scrapy.Field()
 
@@ -39,7 +40,7 @@ class FighterItem(scrapy.Item):
     date_of_birth = scrapy.Field()
     height = scrapy.Field()
     reach = scrapy.Field()
-    weight_class_name = scrapy.Field()
+    weight_class_id = scrapy.Field()
     born = scrapy.Field()
     fighting_out_of = scrapy.Field()
     style = scrapy.Field()

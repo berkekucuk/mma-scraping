@@ -7,15 +7,25 @@ class CancelledFightParser:
     @staticmethod
     def parse_cancelled_fight(cancelled_fight_div, response, event_id):
 
-        ### Fight summary ###
+        ### Fight metadata ###
         middle_div = cancelled_fight_div.xpath('.//div[@data-controller="tooltip"]')
         status_text = middle_div.xpath(".//a/text()").get(default="").strip()
-        status_reason = middle_div.xpath('.//span[contains(@class, "text-sm")]/text()').get(default="").strip()
+        fight_relative_url = middle_div.xpath(".//a/@href").get(default="").strip()
+        fight_id = UrlParser.extract_fight_id(fight_relative_url) if fight_relative_url else None
 
         fight_summary = {
-            "method_type": status_text if status_text else None,
-            "method_detail": status_reason if status_reason else None,
+            "method_type": None,
+            "method_detail": None,
             "round_summary": None,
+        }
+
+        fight_metadata = {
+            "fight_id": fight_id,
+            "bout_type": status_text,
+            "weight_class_lbs": None,
+            "weight_class_id": None,
+            "rounds_format": None,
+            "fight_order": None,
         }
 
         # Sol dövüşçü
@@ -46,18 +56,6 @@ class CancelledFightParser:
             "profile_url": fighter2_profile_url,
             "image_url": fighter2_img,
             "record_after_fight": None,
-        }
-
-        ### Fight metadata ###
-        fight_relative_url = middle_div.xpath(".//a/@href").get(default="").strip()
-        fight_id = UrlParser.extract_fight_id(fight_relative_url) if fight_relative_url else None
-
-        fight_metadata = {
-            "fight_id": fight_id,
-            "bout_type": None,
-            "weight_class_lbs": None,
-            "rounds_format": None,
-            "fight_order": None,
         }
 
         # Yield FightItem

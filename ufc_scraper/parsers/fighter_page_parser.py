@@ -2,6 +2,7 @@ from ..utils.date_parser import DateParser
 from ..utils.total_record_parser import TotalRecordParser
 from ..utils.url_parser import UrlParser
 from ..utils.measurement_parser import MeasurementParser
+from ..utils.weight_class_mapper import WeightClassMapper
 from ..items import FighterItem
 
 
@@ -28,6 +29,7 @@ class FighterPageParser:
         reach = MeasurementParser.parse_measurement(reach_str)
 
         weight_class_name = FighterPageParser.extract_detail(container, "Weight Class:")
+        weight_class_id = WeightClassMapper.map_weight_class(weight_class_name)
         born = FighterPageParser.extract_detail(container, "Born:")
         fighting_out_of = FighterPageParser.extract_detail(container, "Fighting out of:")
         style = FighterPageParser.extract_detail(container, "Foundation Style:")
@@ -45,7 +47,7 @@ class FighterPageParser:
         fighter_item["date_of_birth"] = date_of_birth
         fighter_item["height"] = height
         fighter_item["reach"] = reach
-        fighter_item["weight_class_name"] = weight_class_name
+        fighter_item["weight_class_id"] = weight_class_id
         fighter_item["born"] = born
         fighter_item["fighting_out_of"] = fighting_out_of
         fighter_item["style"] = style

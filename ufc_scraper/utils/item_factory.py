@@ -29,6 +29,7 @@ class ItemFactory:
         fight_item["round_summary"] = fight_summary.get("round_summary")
         fight_item["bout_type"] = fight_metadata.get("bout_type")
         fight_item["weight_class_lbs"] = fight_metadata.get("weight_class_lbs")
+        fight_item["weight_class_id"] = fight_metadata.get("weight_class_id")
         fight_item["rounds_format"] = fight_metadata.get("rounds_format")
         fight_item["fight_order"] = fight_metadata.get("fight_order")
         return fight_item

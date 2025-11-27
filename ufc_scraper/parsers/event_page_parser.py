@@ -7,6 +7,7 @@ from ..utils.url_parser import UrlParser
 from ..utils.method_parser import MethodParser
 from ..utils.datetime_parser import DatetimeParser
 from ..utils.status_parser import StatusParser
+from ..utils.weight_class_mapper import WeightClassMapper
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,7 @@ class EventPageParser:
 
         bout_type = box_div.xpath("./span[1]/a/text()").get(default="").strip() or None
         weight_class_lbs = box_div.xpath("./div[1]/span/text()").get(default="").strip() or None
+        weight_class_id = WeightClassMapper.map_weight_class(weight_class_lbs)
         rounds_format = box_div.xpath("./div[2]/text()").get(default="").strip() or None
         fight_order = bout_details_button_div.xpath(".//span[2]/text()").get(default="").strip() or str(auto_index)
 
@@ -97,6 +99,7 @@ class EventPageParser:
             "fight_id": fight_id,
             "bout_type": bout_type,
             "weight_class_lbs": weight_class_lbs,
+            "weight_class_id": weight_class_id,
             "rounds_format": rounds_format,
             "fight_order": fight_order,
         }
