@@ -1,5 +1,5 @@
 from ..utils.date_parser import DateParser
-from ..utils.total_record_parser import TotalRecordParser
+from ..utils.record_parser import RecordParser
 from ..utils.url_parser import UrlParser
 from ..utils.measurement_parser import MeasurementParser
 from ..utils.weight_class_mapper import WeightClassMapper
@@ -17,7 +17,7 @@ class FighterPageParser:
         nickname = FighterPageParser.extract_detail(container, "Nickname:")
 
         record_str = FighterPageParser.extract_detail(container, "Pro MMA Record:")
-        record = TotalRecordParser.parse_total_record(record_str)
+        record = RecordParser.parse(record_str)
 
         date_of_birth_str = FighterPageParser.extract_detail(container, "Date of Birth:")
         date_of_birth = DateParser.parse_date_to_iso(date_of_birth_str)
