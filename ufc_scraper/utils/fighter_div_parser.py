@@ -18,12 +18,16 @@ class FighterDivParser:
         result = ResultParser.determine_fight_result(fighter_div)
 
         record_after_fight = None
+        is_red_corner = None
 
         if result != "pending":
             record_after_fight_str = fighter_div.xpath('.//span[contains(@class, "text-[15px]") and contains(@class, "md:text-xs") and contains(@class, "leading-tight")]/text()').get(default="").strip() or None
 
             if record_after_fight_str:
                 record_after_fight = RecordParser.parse(record_after_fight_str)
+
+        else:
+            is_red_corner = is_first_fighter
 
         return {
             "fighter_id": fighter_id,
@@ -32,5 +36,6 @@ class FighterDivParser:
             "image_url": image_url,
             "result": result,
             "record_after_fight": record_after_fight,
+            "is_red_corner": is_red_corner,
         }
 

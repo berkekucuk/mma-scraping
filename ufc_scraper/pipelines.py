@@ -157,11 +157,15 @@ class DatabasePipeline:
         if not existing_data:
             self.logger.info(f"[PARTICIPATION] Inserting participation: {fight_id}/{fighter_id}")
             await self.supabase.insert_participation(participation_data)
-        elif self._has_changes(participation_data, existing_data):
-            self.logger.info(f"[PARTICIPATION] Updating participation: {fight_id}/{fighter_id}")
-            await self.supabase.update_participation(fight_id, fighter_id, participation_data)
+
         else:
-            self.logger.debug(f"[PARTICIPATION] No changes for participation: {fight_id}/{fighter_id}")
+            if existing_data.get("is_red_corner") is not None:
+                participation_data.pop("is_red_corner", None)
+            if self._has_changes(participation_data, existing_data):
+                self.logger.info(f"[PARTICIPATION] Updating participation: {fight_id}/{fighter_id}")
+                await self.supabase.update_participation(fight_id, fighter_id, participation_data)
+            else:
+                self.logger.debug(f"[PARTICIPATION] No changes for participation: {fight_id}/{fighter_id}")
 
 
     def _has_changes(self, new_data: dict, old_data: dict) -> bool:

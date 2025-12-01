@@ -83,5 +83,6 @@ class ItemFactory:
             participation["odds_label"] = odds_label
             participation["result"] = result
             participation["record_after_fight"] = fighter_data.get("record_after_fight")
+            participation["is_red_corner"] = fighter_data.get("is_red_corner")
             items.append(participation)
         return items

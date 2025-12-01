@@ -48,6 +48,7 @@ class CancelledFightParser:
             "profile_url": fighter1_profile_url,
             "image_url": fighter1_img,
             "record_after_fight": None,
+            "is_red_corner": True,
         }
 
         fighter2_data = {
@@ -56,6 +57,7 @@ class CancelledFightParser:
             "profile_url": fighter2_profile_url,
             "image_url": fighter2_img,
             "record_after_fight": None,
+            "is_red_corner": False,
         }
 
         # Yield FightItem
