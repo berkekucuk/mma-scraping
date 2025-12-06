@@ -1,4 +1,5 @@
 import logging
+
 from .cancelled_fight_parser import CancelledFightParser
 from ..utils.item_factory import ItemFactory
 from ..utils.odds_parser import OddsParser
@@ -8,6 +9,8 @@ from ..utils.method_parser import MethodParser
 from ..utils.datetime_parser import DatetimeParser
 from ..utils.status_parser import StatusParser
 from ..utils.weight_class_mapper import WeightClassMapper
+from ..utils.round_parser import RoundParser
+
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +65,8 @@ class EventPageParser:
         fight_summary_div = web_view.xpath(".//div[contains(@class, 'flex w-full mt-1 mb-0.5 px-1.5')]")
         method_str = fight_summary_div.css("span.uppercase::text").get(default="").strip() or None
         method_parsed = MethodParser.split_method(method_str)
-        round_summary = fight_summary_div.css(r"span.text-xs11.md\:text-xs10.leading-relaxed::text").get(default="").strip() or None
+        round_summary_str = fight_summary_div.css(r"span.text-xs11.md\:text-xs10.leading-relaxed::text").get(default="").strip() or None
+        round_summary = RoundParser.standardize_round_summary(round_summary_str)
 
         fight_summary = {
             "method_type": method_parsed["method_type"],
