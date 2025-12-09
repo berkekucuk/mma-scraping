@@ -1,19 +1,9 @@
-FROM python:3.12-slim
+FROM public.ecr.aws/lambda/python:3.12
 
-RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-COPY requirements.txt .
+COPY requirements.txt ${LAMBDA_TASK_ROOT}
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY . ${LAMBDA_TASK_ROOT}
 
-RUN mkdir -p /app/logs
-
-RUN touch /app/logs/upcoming_events.log /app/logs/live_events.log
-
-RUN crontab /app/cronjobs
-
-CMD cron && tail -f /app/logs/upcoming_events.log
+CMD [ "lambda_function.handler" ]
