@@ -2,6 +2,7 @@ import logging
 import scrapy
 from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
+from collections import defaultdict
 from .services.supabase_manager import SupabaseManager
 from .parsers.fighter_page_parser import FighterPageParser
 
@@ -11,12 +12,15 @@ class DatabasePipeline:
     def __init__(self):
         self.supabase = SupabaseManager
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info("Unified DatabasePipeline initialized.")
+        self.logger.info("Unified DatabasePipeline initialized with Buffer Mechanism.")
 
-        # Fighters who have been processed in this run
         self.processed_fighter_ids = set()
-        # Fighters scheduled for scraping (prevents unnecessary scrape tasks)
+
         self.profile_scrape_scheduled = set()
+
+        self.processed_fight_ids = set()
+
+        self.pending_participations = defaultdict(list)
 
 
     async def process_item(self, item, spider):
@@ -39,6 +43,7 @@ class DatabasePipeline:
             raise
         except Exception as e:
             self.logger.error(f"Error processing item_type '{item_type}': {e}", exc_info=True)
+
         return item
 
 
@@ -81,40 +86,43 @@ class DatabasePipeline:
         else:
             self.logger.debug(f"[FIGHT] No changes for fight: {fight_id}")
 
+        self.processed_fight_ids.add(fight_id)
+
+        if fight_id in self.pending_participations:
+            pending_items = self.pending_participations.pop(fight_id)
+            self.logger.info(f"[BUFFER] Flushing {len(pending_items)} pending participations for fight {fight_id}")
+
+            for pending_adapter in pending_items:
+                try:
+                    await self._process_participation(pending_adapter)
+                except Exception as e:
+                    self.logger.error(f"[BUFFER ERROR] Failed to process buffered participation for fight {fight_id}: {e}")
+
 
     async def _process_fighter(self, adapter: ItemAdapter, spider):
         fighter_id = adapter.get("fighter_id")
         if not fighter_id:
             return
 
-        # === 1. PREVENT UNNECESSARY PROCESSING ===
         if fighter_id in self.processed_fighter_ids:
-            self.logger.debug(f"[FIGHTER] Already processed: {fighter_id}. Skipping.")
             return
 
-        # === 2. CHECK DATABASE ===
         existing_data = await self.supabase.get_fighter_by_id(fighter_id)
 
         if existing_data:
-            self.logger.debug(f"[FIGHTER] Fighter {fighter_id} already exists. Skipping.")
             self.processed_fighter_ids.add(fighter_id)
             return
 
-        # === 3. NEW FIGHTER (NOT IN DB) ===
-
-        # Is the incoming data incomplete? (if date_of_birth, born, fighting_out_of are all empty, it is incomplete)
         is_incomplete_data = not adapter.get("date_of_birth") and not adapter.get("born") and not adapter.get("fighting_out_of")
 
         fighter_data = adapter.asdict()
         fighter_data.pop("item_type", None)
 
         if is_incomplete_data:
-            # --- CASE 3a: Incomplete Data (from EventPageParser) -> Schedule Task ---
-
             if fighter_id in self.profile_scrape_scheduled:
-                raise DropItem(f"Profile scrape already scheduled for {fighter_id}. Dropping duplicate.")
+                raise DropItem(f"Profile scrape already scheduled for {fighter_id}.")
 
-            self.logger.info(f"[FIGHTER] New fighter {fighter_id} (incomplete). Scheduling profile scrape...")
+            self.logger.info(f"[FIGHTER] Scheduling profile scrape for {fighter_id}")
             self.profile_scrape_scheduled.add(fighter_id)
 
             profile_url = adapter.get("profile_url")
@@ -134,83 +142,92 @@ class DatabasePipeline:
             raise DropItem(f"Scraping new fighter profile: {fighter_id}")
 
         else:
-            # --- CASE 3b: Complete Data (from FighterPageParser) -> Save ---
-            self.logger.info(f"[FIGHTER] New fighter {fighter_id} (complete). Inserting full data.")
+            self.logger.info(f"[FIGHTER] Inserting new fighter: {fighter_id}")
             await self.supabase.insert_fighter(fighter_data)
-
             self.processed_fighter_ids.add(fighter_id)
             self.profile_scrape_scheduled.discard(fighter_id)
-            return
 
 
     async def _process_participation(self, adapter: ItemAdapter):
         fight_id = adapter.get("fight_id")
         fighter_id = adapter.get("fighter_id")
+
         if not fight_id or not fighter_id:
-            self.logger.warning("[PARTICIPATION] ParticipationItem is missing key IDs. Skipping.")
+            self.logger.warning("[PARTICIPATION] Missing IDs. Skipping.")
             return
+
+        if fight_id not in self.processed_fight_ids:
+
+            is_fight_in_db = await self.supabase.get_fight_by_id(fight_id)
+
+            if is_fight_in_db:
+                self.processed_fight_ids.add(fight_id)
+            else:
+                self.logger.debug(f"[BUFFER] Holding participation for fight {fight_id}. Waiting for parent.")
+                self.pending_participations[fight_id].append(adapter)
+                return
 
         participation_data = adapter.asdict()
         participation_data.pop("item_type", None)
         existing_data = await self.supabase.get_participation(fight_id, fighter_id)
 
         if not existing_data:
-            self.logger.info(f"[PARTICIPATION] Inserting participation: {fight_id}/{fighter_id}")
+            self.logger.info(f"[PARTICIPATION] Inserting: {fight_id}/{fighter_id}")
             await self.supabase.insert_participation(participation_data)
 
         else:
             if existing_data.get("is_red_corner") is not None:
                 participation_data.pop("is_red_corner", None)
             if self._has_changes(participation_data, existing_data):
-                self.logger.info(f"[PARTICIPATION] Updating participation: {fight_id}/{fighter_id}")
+                self.logger.info(f"[PARTICIPATION] Updating: {fight_id}/{fighter_id}")
                 await self.supabase.update_participation(fight_id, fighter_id, participation_data)
             else:
-                self.logger.debug(f"[PARTICIPATION] No changes for participation: {fight_id}/{fighter_id}")
+                self.logger.debug(f"[PARTICIPATION] No changes: {fight_id}/{fighter_id}")
+
+
+    async def close_spider(self, spider):
+        if self.pending_participations:
+            self.logger.warning(f"[CLOSING] Found {len(self.pending_participations)} orphaned fight groups in buffer.")
+
+            for fight_id, items in self.pending_participations.items():
+                is_fight_in_db = await self.supabase.get_fight_by_id(fight_id)
+
+                if is_fight_in_db:
+                    self.logger.info(f"[CLOSING] Fight {fight_id} found in DB. Rescuing {len(items)} items.")
+                    for item in items:
+                        try:
+                            self.processed_fight_ids.add(fight_id)
+                            await self._process_participation(item)
+                        except Exception as e:
+                            self.logger.error(f"[CLOSING ERROR] Could not rescue item: {e}")
+                else:
+                    self.logger.error(f"[DATA LOSS] Fight {fight_id} never arrived. Dropping {len(items)} participations.")
 
 
     def _has_changes(self, new_data: dict, old_data: dict) -> bool:
-
         JSONB_FIELDS = {'record', 'height', 'reach', 'record_after_fight'}
         NUMERIC_FIELDS = {'weight_class_lbs', 'odds_value', 'fight_order'}
         IGNORE_FIELDS = {'created_at', 'updated_at'}
 
         for key, new_value in new_data.items():
-
-            if key in IGNORE_FIELDS:
-                continue
-
-            if key not in old_data:
-                self.logger.debug(f"Change detected: New key '{key}' found.")
-                return True
+            if key in IGNORE_FIELDS: continue
+            if key not in old_data: return True
 
             old_value = old_data.get(key)
-
-            if (new_value is None) != (old_value is None):
-                self.logger.debug(f"Change detected (None mismatch): {key} '{old_value}' -> '{new_value}'")
-                return True
-
-            if new_value is None:
-                continue
+            if (new_value is None) != (old_value is None): return True
+            if new_value is None: continue
 
             if key in JSONB_FIELDS:
-                if new_value != old_value:
-                    self.logger.debug(f"Change detected (JSONB): {key} '{old_value}' -> '{new_value}'")
-                    return True
+                if new_value != old_value: return True
                 continue
 
             if key in NUMERIC_FIELDS:
                 try:
-                    if float(new_value) != float(old_value):
-                        self.logger.debug(f"Change detected (Numeric): {key} '{old_value}' -> '{new_value}'")
-                        return True
+                    if float(new_value) != float(old_value): return True
                 except (ValueError, TypeError):
-                    if str(new_value) != str(old_value):
-                        self.logger.debug(f"Change detected (Numeric-Fallback): {key} '{old_value}' -> '{new_value}'")
-                        return True
+                    if str(new_value) != str(old_value): return True
                 continue
 
-            if str(new_value) != str(old_value):
-                self.logger.debug(f"Change detected (String): {key} '{old_value}' -> '{new_value}'")
-                return True
+            if str(new_value) != str(old_value): return True
 
         return False
