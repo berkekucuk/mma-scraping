@@ -12,27 +12,34 @@ class SmartSpider(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super(SmartSpider, self).__init__(*args, **kwargs)
         self.supabase = SupabaseManager
-
-        # Parameters for live mode
-        self.event_id = kwargs.get('event_id')
-        self.event_url = kwargs.get('event_url')
+        self.mode = kwargs.get('mode', 'upcoming')  # 'live' or 'upcoming'
 
 
     async def start(self):
-        if self.event_id and self.event_url:
-            # LIVE MOD
-            # trigger by run_live_scraper.py
-            self.logger.info(f"[LIVE MODE] Scraping single event: {self.event_id}")
+        if self.mode == 'live':
+            live_event = await self.supabase.get_live_event()
+
+            if not live_event:
+                self.logger.info("[LIVE MODE] No live events found. Exiting.")
+                return
+
+            event_id = live_event.get("event_id")
+            event_url = live_event.get("event_url")
+
+            self.logger.info(f"[LIVE MODE] Scraping event: {event_id}")
             yield scrapy.Request(
-                url=self.event_url, callback=self.parse_live_event, cb_kwargs={"event_id": self.event_id, "event_url": self.event_url}
+                url=event_url,
+                callback=self.parse_live_event,
+                cb_kwargs={"event_id": event_id, "event_url": event_url}
             )
 
         else:
-            # MANUEL MOD
-            # trigger by 'scrapy crawl event' command
-            self.logger.info("[FULL MODE] Starting full event pagination scrape...")
+            self.logger.info("[UPCOMING MODE] Starting event pagination scrape...")
             url = "https://www.tapology.com/fightcenter/promotions/1-ultimate-fighting-championship-ufc?page=1"
-            yield scrapy.Request(url=url, callback=self.parse_upcoming_events)
+            yield scrapy.Request(
+                url=url,
+                callback=self.parse_upcoming_events
+                )
 
 
     def parse_live_event(self, response, event_id, event_url):
