@@ -13,7 +13,7 @@ class RankingSpider(scrapy.Spider):
     start_urls = ['https://www.ufc.com/rankings']
 
     WEIGHT_CLASS_MAPPING = {
-        "Men's Pound-for-Pound Top 15": "mens_p4p",
+        "Men's Pound-for-Pound Top Rank": "mens_p4p",
         "Men's Pound-for-Pound": "mens_p4p",
         "Flyweight": "FLW",
         "Bantamweight": "BW",
@@ -23,7 +23,7 @@ class RankingSpider(scrapy.Spider):
         "Middleweight": "MW",
         "Light Heavyweight": "LHW",
         "Heavyweight": "HW",
-        "Women's Pound-for-Pound Top 15": "womens_p4p",
+        "Women's Pound-for-Pound Top Rank": "womens_p4p",
         "Women's Pound-for-Pound": "womens_p4p",
         "Women's Strawweight": "SW",
         "Women's Flyweight": "W_FLW",
@@ -41,7 +41,7 @@ class RankingSpider(scrapy.Spider):
         "Ailin Perez": "Ailín Pérez",
         "Waldo Cortes Acosta": "Waldo Cortes-Acosta",
         "Natalia Silva": "Natália Silva",
-        "Lone'er Kavanagh": "Lone'er Kavanagh",
+        "Lone’er Kavanagh": "Lone'er Kavanagh",
         "Farès Ziam": "Fares Ziam",
         "Zhang Mingyang": "Mingyang Zhang",
         "Wang Cong": "Cong Wang"
@@ -58,6 +58,26 @@ class RankingSpider(scrapy.Spider):
             raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables are required")
 
         self.supabase: Client = create_client(supabase_url, supabase_key)
+        self._load_fighter_cache()
+
+    def _load_fighter_cache(self):
+        self.fighter_cache = {}
+        batch_size = 1000
+        offset = 0
+
+        while True:
+            response = self.supabase.table('fighters').select('fighter_id, name').range(offset, offset + batch_size - 1).execute()
+
+            if not response.data:
+                break
+
+            for f in response.data:
+                self.fighter_cache[f['name'].strip()] = f['fighter_id']
+
+            if len(response.data) < batch_size:
+                break
+
+            offset += batch_size
 
     def _setup_file_logger(self):
         logs_dir = os.path.join(os.getcwd(), "logs")
@@ -86,16 +106,8 @@ class RankingSpider(scrapy.Spider):
             db_weight_class_id = self.WEIGHT_CLASS_MAPPING.get(title)
 
             if not db_weight_class_id:
-                for k, v in self.WEIGHT_CLASS_MAPPING.items():
-                    if k in title:
-                        db_weight_class_id = v
-                        break
-
-            if not db_weight_class_id:
                 self.file_logger.warning(f"Weight class not matched: {title}")
                 continue
-
-            print(f"--- Processing: {title} ({db_weight_class_id}) ---")
 
             champion_name = group.css('.info h5 a::text').get()
             if champion_name:
@@ -113,13 +125,9 @@ class RankingSpider(scrapy.Spider):
 
     def process_fighter(self, fighter_name, weight_class_id, rank):
         fighter_name = fighter_name.strip()
-        found_id = None
 
         search_name = self.NAME_EXCEPTIONS.get(fighter_name, fighter_name)
-
-        res = self.supabase.table('fighters').select('fighter_id').ilike('name', search_name).execute()
-        if res.data:
-            found_id = res.data[0]['fighter_id']
+        found_id = self.fighter_cache.get(search_name)
 
         if found_id:
             data = {
@@ -130,16 +138,10 @@ class RankingSpider(scrapy.Spider):
             }
             try:
                 self.supabase.table('rankings').upsert(data, on_conflict='weight_class_id, rank_number').execute()
-                prefix = "CHAMPION" if rank == 0 else f"#{rank}"
-                print(f"   OK {prefix}: {fighter_name}")
                 return True
             except Exception as e:
                 self.file_logger.error(f"Write error - {fighter_name}: {e}")
                 return False
         else:
             self.file_logger.warning(f"Fighter not found in DB: {fighter_name}")
-            print(f"   NOT FOUND: {fighter_name}")
             return False
-
-    def closed(self, reason):
-        print(f"\nLog file: {self.log_file_path}")
