@@ -1,4 +1,3 @@
-from datetime import timedelta, timezone, datetime
 import os
 import logging
 from supabase import acreate_client, AsyncClient
@@ -61,6 +60,33 @@ class SupabaseManager:
     @classmethod
     async def get_event_by_id(cls, event_id: str):
         return await cls._get_by_id("events", "event_id", event_id)
+
+    @classmethod
+    async def get_events_by_ids(cls, event_ids: list):
+        """
+        Fetch multiple events by their IDs in a single query.
+        Returns a dictionary mapping event_id to event data.
+        """
+        if not event_ids:
+            return {}
+
+        try:
+            client = await cls.get_client()
+            response = (
+                await client.table("events")
+                .select("*")
+                .in_("event_id", event_ids)
+                .execute()
+            )
+
+            # Convert list to dictionary for easy lookup
+            events_dict = {event["event_id"]: event for event in response.data}
+            cls._logger.debug(f"Fetched {len(events_dict)} events from {len(event_ids)} requested IDs")
+            return events_dict
+
+        except Exception as e:
+            cls._logger.error(f"Failed to get events by IDs: {e}")
+            raise e
 
     @classmethod
     async def get_live_event(cls):

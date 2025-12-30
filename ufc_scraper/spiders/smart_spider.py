@@ -53,6 +53,7 @@ class SmartSpider(scrapy.Spider):
         events = response.css('div[data-controller="bout-toggler"]')
         self.logger.info(f"Found {len(events)} events on page {response.url}")
 
+        event_data_list = []
         for event in events:
             event_relative_url = event.css("div.promotion a::attr(href)").get(default="")
             if not event_relative_url:
@@ -71,16 +72,25 @@ class SmartSpider(scrapy.Spider):
                 self.logger.error(f"Could not extract event_id from: {event_relative_url}")
                 continue
 
-            existing_event = await self.supabase.get_event_by_id(event_id)
+            event_data_list.append({"event_id": event_id, "event_url": event_url})
 
-            if not existing_event or existing_event.get("status") == "Upcoming":
+        if event_data_list:
+            event_ids = [item["event_id"] for item in event_data_list]
+            existing_events = await self.supabase.get_events_by_ids(event_ids)
 
-                self.logger.info(f"Event {event_id} is new or upcoming. Scheduling full page scrape.")
+            for event_data in event_data_list:
+                event_id = event_data["event_id"]
+                event_url = event_data["event_url"]
 
-                yield scrapy.Request(
-                    url=event_url,
-                    callback=EventPageParser.parse_card,
-                    cb_kwargs={"event_id": event_id, "event_url": event_url},
-                )
-            else:
-                self.logger.debug(f"Event {event_id} is already completed. Skipping.")
+                existing_event = existing_events.get(event_id)
+
+                if not existing_event or existing_event.get("status") == "Upcoming":
+                    self.logger.info(f"Event {event_id} is new or upcoming. Scheduling full page scrape.")
+
+                    yield scrapy.Request(
+                        url=event_url,
+                        callback=EventPageParser.parse_card,
+                        cb_kwargs={"event_id": event_id, "event_url": event_url},
+                    )
+                else:
+                    self.logger.debug(f"Event {event_id} is already completed. Skipping.")
