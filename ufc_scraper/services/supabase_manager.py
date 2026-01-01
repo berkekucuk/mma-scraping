@@ -35,38 +35,12 @@ class SupabaseManager:
 
         return cls._instance
 
-    @classmethod
-    async def _get_by_id(cls, table_name: str, id_column: str, id_value: str):
-        """
-        General helper method to perform a 'get' operation by unique ID.
-        """
-        try:
-            client = await cls.get_client()
-            response = await client.table(table_name).select("*").eq(id_column, id_value).limit(1).execute()
-            if response.data:
-                return response.data[0]
-            else:
-                cls._logger.debug(f"[{table_name}] Item not found in DB: {id_value}")
-                return None
-
-        except Exception as e:
-            cls._logger.error(f"Unexpected error getting {table_name} {id_value}: {e}")
-            raise e
-
     # ──────────────────────────────────────────────────────────
     # EVENT OPERATIONS
     # ──────────────────────────────────────────────────────────
 
     @classmethod
-    async def get_event_by_id(cls, event_id: str):
-        return await cls._get_by_id("events", "event_id", event_id)
-
-    @classmethod
     async def get_events_by_ids(cls, event_ids: list):
-        """
-        Fetch multiple events by their IDs in a single query.
-        Returns a dictionary mapping event_id to event data.
-        """
         if not event_ids:
             return {}
 
@@ -79,7 +53,6 @@ class SupabaseManager:
                 .execute()
             )
 
-            # Convert list to dictionary for easy lookup
             events_dict = {event["event_id"]: event for event in response.data}
             cls._logger.debug(f"Fetched {len(events_dict)} events from {len(event_ids)} requested IDs")
             return events_dict
@@ -90,9 +63,6 @@ class SupabaseManager:
 
     @classmethod
     async def get_live_event(cls):
-        """
-        Fetch the event that is currently marked as 'live' in the database.
-        """
         try:
             client = await cls.get_client()
 
@@ -139,8 +109,26 @@ class SupabaseManager:
     # ──────────────────────────────────────────────────────────
 
     @classmethod
-    async def get_fight_by_id(cls, fight_id: str):
-        return await cls._get_by_id("fights", "fight_id", fight_id)
+    async def get_fights_by_ids(cls, fight_ids: list):
+        if not fight_ids:
+            return {}
+
+        try:
+            client = await cls.get_client()
+            response = (
+                await client.table("fights")
+                .select("*")
+                .in_("fight_id", fight_ids)
+                .execute()
+            )
+
+            fights_dict = {fight["fight_id"]: fight for fight in response.data}
+            cls._logger.debug(f"Fetched {len(fights_dict)} fights from {len(fight_ids)} requested IDs")
+            return fights_dict
+
+        except Exception as e:
+            cls._logger.error(f"Failed to get fights by IDs: {e}")
+            raise e
 
     @classmethod
     async def insert_fight(cls, fight_data: dict):
@@ -167,8 +155,26 @@ class SupabaseManager:
     # ──────────────────────────────────────────────────────────
 
     @classmethod
-    async def get_fighter_by_id(cls, fighter_id: str):
-        return await cls._get_by_id("fighters", "fighter_id", fighter_id)
+    async def get_fighters_by_ids(cls, fighter_ids: list):
+        if not fighter_ids:
+            return {}
+
+        try:
+            client = await cls.get_client()
+            response = (
+                await client.table("fighters")
+                .select("fighter_id, name")
+                .in_("fighter_id", fighter_ids)
+                .execute()
+            )
+
+            fighters_dict = {fighter["fighter_id"]: fighter for fighter in response.data}
+            cls._logger.debug(f"Fetched {len(fighters_dict)} fighters from {len(fighter_ids)} requested IDs")
+            return fighters_dict
+
+        except Exception as e:
+            cls._logger.error(f"Failed to get fighters by IDs: {e}")
+            raise e
 
     @classmethod
     async def insert_fighter(cls, fighter_data: dict):
@@ -180,40 +186,40 @@ class SupabaseManager:
             cls._logger.error(f"Failed to insert fighter {fighter_data.get('fighter_id')}: {e}")
             raise e
 
-    @classmethod
-    async def update_fighter(cls, fighter_id: str, fighter_data: dict):
-        try:
-            client = await cls.get_client()
-            await client.table("fighters").update(fighter_data).eq("fighter_id", fighter_id).execute()
-
-        except Exception as e:
-            cls._logger.error(f"Failed to update fighter {fighter_id}: {e}")
-            raise e
-
     # ──────────────────────────────────────────────────────────
     # PARTICIPATION OPERATIONS
     # ──────────────────────────────────────────────────────────
 
     @classmethod
-    async def get_participation(cls, fight_id: str, fighter_id: str):
+    async def get_participations_by_keys(cls, participation_keys: list):
+        if not participation_keys:
+            return {}
+
         try:
             client = await cls.get_client()
+
+            fight_ids = list(set(fight_id for fight_id, _ in participation_keys))
+            fighter_ids = list(set(fighter_id for _, fighter_id in participation_keys))
+
             response = (
                 await client.table("participants")
                 .select("*")
-                .eq("fight_id", fight_id)
-                .eq("fighter_id", fighter_id)
-                .limit(1)
+                .in_("fight_id", fight_ids)
+                .in_("fighter_id", fighter_ids)
                 .execute()
             )
-            if response.data:
-                return response.data[0]
-            else:
-                cls._logger.debug(f"[PARTICIPATION] Item not found in DB: {fight_id}/{fighter_id}")
-                return None
+
+            participations_dict = {
+                (part["fight_id"], part["fighter_id"]): part
+                for part in response.data
+                if (part["fight_id"], part["fighter_id"]) in participation_keys
+            }
+
+            cls._logger.debug(f"Fetched {len(participations_dict)} participations from {len(participation_keys)} requested keys")
+            return participations_dict
 
         except Exception as e:
-            cls._logger.error(f"Unexpected error getting participation {fight_id}/{fighter_id}: {e}")
+            cls._logger.error(f"Failed to get participations by keys: {e}")
             raise e
 
     @classmethod
