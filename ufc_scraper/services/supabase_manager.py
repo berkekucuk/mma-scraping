@@ -186,6 +186,16 @@ class SupabaseManager:
             cls._logger.error(f"Failed to insert fighter {fighter_data.get('fighter_id')}: {e}")
             raise e
 
+    @classmethod
+    async def update_fighter(cls, fighter_id: str, fighter_data: dict):
+        try:
+            client = await cls.get_client()
+            await client.table("fighters").update(fighter_data).eq("fighter_id", fighter_id).execute()
+
+        except Exception as e:
+            cls._logger.error(f"Failed to update fighter {fighter_id}: {e}")
+            raise e
+
     # ──────────────────────────────────────────────────────────
     # PARTICIPATION OPERATIONS
     # ──────────────────────────────────────────────────────────
