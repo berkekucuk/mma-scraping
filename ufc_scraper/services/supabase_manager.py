@@ -251,3 +251,55 @@ class SupabaseManager:
         except Exception as e:
             cls._logger.error(f"Failed to update participation {fight_id}/{fighter_id}: {e}")
             raise e
+
+    # ──────────────────────────────────────────────────────────
+    # RANKING OPERATIONS
+    # ──────────────────────────────────────────────────────────
+
+    @classmethod
+    async def load_fighter_cache(cls):
+        try:
+            client = await cls.get_client()
+            fighter_cache = {}
+            batch_size = 1000
+            offset = 0
+
+            while True:
+                response = (
+                    await client.table('fighters')
+                    .select('fighter_id, name')
+                    .range(offset, offset + batch_size - 1)
+                    .execute()
+                )
+
+                if not response.data:
+                    break
+
+                for f in response.data:
+                    fighter_cache[f['name'].strip()] = f['fighter_id']
+
+                if len(response.data) < batch_size:
+                    break
+
+                offset += batch_size
+
+            cls._logger.debug(f"Loaded {len(fighter_cache)} fighters into cache")
+            return fighter_cache
+
+        except Exception as e:
+            cls._logger.error(f"Failed to load fighter cache: {e}")
+            raise e
+
+    @classmethod
+    async def batch_upsert_rankings(cls, rankings_data: list):
+        try:
+            if not rankings_data:
+                return
+
+            client = await cls.get_client()
+            await client.table("rankings").upsert(rankings_data, on_conflict="weight_class_id, rank_number").execute()
+            cls._logger.debug(f"Batch upserted {len(rankings_data)} rankings")
+
+        except Exception as e:
+            cls._logger.error(f"Failed to batch upsert rankings: {e}")
+            raise e

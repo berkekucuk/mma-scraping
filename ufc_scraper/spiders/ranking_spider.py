@@ -3,7 +3,8 @@ import logging
 from datetime import datetime
 import scrapy
 from dotenv import load_dotenv
-from supabase import create_client, Client
+from ..services.supabase_manager import SupabaseManager
+from ..utils.ranking_mappings import WEIGHT_CLASS_MAPPING, NAME_EXCEPTIONS
 
 load_dotenv()
 
@@ -12,72 +13,12 @@ class RankingSpider(scrapy.Spider):
     name = "ranking"
     start_urls = ['https://www.ufc.com/rankings']
 
-    WEIGHT_CLASS_MAPPING = {
-        "Men's Pound-for-Pound Top Rank": "mens_p4p",
-        "Men's Pound-for-Pound": "mens_p4p",
-        "Flyweight": "FLW",
-        "Bantamweight": "BW",
-        "Featherweight": "FW",
-        "Lightweight": "LW",
-        "Welterweight": "WW",
-        "Middleweight": "MW",
-        "Light Heavyweight": "LHW",
-        "Heavyweight": "HW",
-        "Women's Pound-for-Pound Top Rank": "womens_p4p",
-        "Women's Pound-for-Pound": "womens_p4p",
-        "Women's Strawweight": "SW",
-        "Women's Flyweight": "W_FLW",
-        "Women's Bantamweight": "W_BW",
-        "Women's Featherweight": "W_FW"
-    }
-
-    NAME_EXCEPTIONS = {
-        "Loopy Godinez": "Lupita Godinez",
-        "Benoît Saint Denis": "Benoit Saint-Denis",
-        "Benoit Saint Denis": "Benoit Saint-Denis",
-        "Zhang Weili": "Weili Zhang",
-        "Song Yadong": "Yadong Song",
-        "Yan Xiaonan": "Xiaonan Yan",
-        "Ailin Perez": "Ailín Pérez",
-        "Waldo Cortes Acosta": "Waldo Cortes-Acosta",
-        "Natalia Silva": "Natália Silva",
-        "Lone’er Kavanagh": "Lone'er Kavanagh",
-        "Farès Ziam": "Fares Ziam",
-        "Zhang Mingyang": "Mingyang Zhang",
-        "Wang Cong": "Cong Wang"
-    }
-
     def __init__(self, *args, **kwargs):
         super(RankingSpider, self).__init__(*args, **kwargs)
+        self.supabase = SupabaseManager
+        self.fighter_cache = None
+        self.rankings_buffer = []
         self._setup_file_logger()
-
-        supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = os.getenv("SUPABASE_KEY")
-
-        if not supabase_url or not supabase_key:
-            raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables are required")
-
-        self.supabase: Client = create_client(supabase_url, supabase_key)
-        self._load_fighter_cache()
-
-    def _load_fighter_cache(self):
-        self.fighter_cache = {}
-        batch_size = 1000
-        offset = 0
-
-        while True:
-            response = self.supabase.table('fighters').select('fighter_id, name').range(offset, offset + batch_size - 1).execute()
-
-            if not response.data:
-                break
-
-            for f in response.data:
-                self.fighter_cache[f['name'].strip()] = f['fighter_id']
-
-            if len(response.data) < batch_size:
-                break
-
-            offset += batch_size
 
     def _setup_file_logger(self):
         logs_dir = os.path.join(os.getcwd(), "logs")
@@ -94,7 +35,12 @@ class RankingSpider(scrapy.Spider):
         self.file_logger.addHandler(file_handler)
         self.log_file_path = log_file
 
-    def parse(self, response):
+    async def start(self):
+        self.fighter_cache = await self.supabase.load_fighter_cache()
+        self.logger.info(f"Loaded {len(self.fighter_cache)} fighters into cache")
+        yield scrapy.Request(url=self.start_urls[0], callback=self.parse)
+
+    async def parse(self, response):
         groupings = response.css('.view-grouping')
 
         for group in groupings:
@@ -103,7 +49,7 @@ class RankingSpider(scrapy.Spider):
                 continue
 
             title = raw_title.strip()
-            db_weight_class_id = self.WEIGHT_CLASS_MAPPING.get(title)
+            db_weight_class_id = WEIGHT_CLASS_MAPPING.get(title)
 
             if not db_weight_class_id:
                 self.file_logger.warning(f"Weight class not matched: {title}")
@@ -123,25 +69,27 @@ class RankingSpider(scrapy.Spider):
                     self.process_fighter(fighter_name, db_weight_class_id, current_rank)
                     current_rank += 1
 
+        if self.rankings_buffer:
+            try:
+                await self.supabase.batch_upsert_rankings(self.rankings_buffer)
+                self.logger.info(f"Batch upserted {len(self.rankings_buffer)} rankings")
+            except Exception as e:
+                self.file_logger.error(f"Batch upsert error: {e}")
+
     def process_fighter(self, fighter_name, weight_class_id, rank):
         fighter_name = fighter_name.strip()
 
-        search_name = self.NAME_EXCEPTIONS.get(fighter_name, fighter_name)
+        search_name = NAME_EXCEPTIONS.get(fighter_name, fighter_name)
         found_id = self.fighter_cache.get(search_name)
 
         if found_id:
             data = {
                 "weight_class_id": weight_class_id,
                 "fighter_id": found_id,
-                "rank_number": rank,
-                "updated_at": "now()"
+                "rank_number": rank
             }
-            try:
-                self.supabase.table('rankings').upsert(data, on_conflict='weight_class_id, rank_number').execute()
-                return True
-            except Exception as e:
-                self.file_logger.error(f"Write error - {fighter_name}: {e}")
-                return False
+            self.rankings_buffer.append(data)
+            return True
         else:
             self.file_logger.warning(f"Fighter not found in DB: {fighter_name}")
             return False
