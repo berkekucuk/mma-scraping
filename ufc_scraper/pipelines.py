@@ -72,10 +72,10 @@ class DatabasePipeline:
         for event_id, event_data in current_batch.items():
             remote_data = remote_events.get(event_id)
             if not remote_data:
-                self.logger.info(f"[EVENT] Inserting new event: {event_id}")
+                self.logger.debug(f"[EVENT] Inserting new event: {event_id}")
                 await self.supabase.insert_event(event_data)
             elif self._has_changes(event_data, remote_data):
-                self.logger.info(f"[EVENT] Updating event: {event_id}")
+                self.logger.debug(f"[EVENT] Updating event: {event_id}")
                 await self.supabase.update_event(event_id, event_data)
 
 
@@ -91,10 +91,10 @@ class DatabasePipeline:
         for fight_id, fight_data in current_batch.items():
             remote_data = remote_fights.get(fight_id)
             if not remote_data:
-                self.logger.info(f"[FIGHT] Inserting new fight: {fight_id}")
+                self.logger.debug(f"[FIGHT] Inserting new fight: {fight_id}")
                 await self.supabase.insert_fight(fight_data)
             elif self._has_changes(fight_data, remote_data):
-                self.logger.info(f"[FIGHT] Updating fight: {fight_id}")
+                self.logger.debug(f"[FIGHT] Updating fight: {fight_id}")
                 await self.supabase.update_fight(fight_id, fight_data)
 
 
@@ -109,7 +109,7 @@ class DatabasePipeline:
 
         for fighter_id, fighter_data in current_batch.items():
             if not remote_fighters.get(fighter_id):
-                self.logger.info(f"[FIGHTER] Inserting new fighter: {fighter_id}")
+                self.logger.debug(f"[FIGHTER] Inserting new fighter: {fighter_id}")
                 await self.supabase.insert_fighter(fighter_data)
 
 
@@ -126,13 +126,13 @@ class DatabasePipeline:
             fight_id, fighter_id = key
             remote_data = remote_participations.get(key)
             if not remote_data:
-                self.logger.info(f"[PARTICIPATION] Inserting: {fight_id}/{fighter_id}")
+                self.logger.debug(f"[PARTICIPATION] Inserting: {fight_id}/{fighter_id}")
                 await self.supabase.insert_participation(participation_data)
             else:
                 if remote_data.get("is_red_corner") is not None:
                     participation_data.pop("is_red_corner", None)
                 if self._has_changes(participation_data, remote_data):
-                    self.logger.info(f"[PARTICIPATION] Updating: {fight_id}/{fighter_id}")
+                    self.logger.debug(f"[PARTICIPATION] Updating: {fight_id}/{fighter_id}")
                     await self.supabase.update_participation(fight_id, fighter_id, participation_data)
 
 
