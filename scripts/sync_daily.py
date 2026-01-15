@@ -6,10 +6,10 @@ from supabase import acreate_client, AsyncClient
 from dotenv import load_dotenv
 load_dotenv()
 
-PROD_URL = os.environ.get("SUPABASE_PROD_URL")
-PROD_KEY = os.environ.get("SUPABASE_PROD_KEY")
-BACKUP_URL = os.environ.get("SUPABASE_DEV_URL")
-BACKUP_KEY = os.environ.get("SUPABASE_DEV_KEY")
+PROD_URL = os.getenv("SUPABASE_PROD_URL")
+PROD_KEY = os.getenv("SUPABASE_PROD_KEY")
+BACKUP_URL = os.getenv("SUPABASE_DEV_URL")
+BACKUP_KEY = os.getenv("SUPABASE_DEV_KEY")
 
 SYNC_TABLES = [
     "events",
