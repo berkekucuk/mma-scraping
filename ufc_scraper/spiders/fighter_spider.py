@@ -16,7 +16,7 @@ class FighterSpider(scrapy.Spider):
         self.fighter_id = kwargs.get('fighter_id')
         self.target_url = kwargs.get('profile_url')
 
-    def start_requests(self):
+    async def start(self):
         if self.target_url and self.fighter_id:
             self.logger.info(f"[RESCUE MODE] Starting scrape for Fighter ID: {self.fighter_id}")
 
