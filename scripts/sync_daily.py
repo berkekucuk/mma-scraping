@@ -36,6 +36,10 @@ async def sync_table(prod_client: AsyncClient, backup_client: AsyncClient, table
             print(f"No changes found for {table_name}.")
             return
 
+        if table_name == "events":
+            for record in data:
+                record.pop("event_year", None)
+
         print(f"Found {len(data)} records to upsert in {table_name}...")
 
         await backup_client.table(table_name).upsert(data).execute()

@@ -1,5 +1,6 @@
 annotated-types==0.7.0
 anyio==4.11.0
+asyncio==4.0.0
 attrs==25.4.0
 Automat==25.4.16
 certifi==2025.10.5
@@ -59,6 +60,7 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 ua-parser==1.0.1
 ua-parser-builtins==0.18.0.post1
+Unidecode==1.4.0
 urllib3==2.5.0
 user-agents==2.2.0
 w3lib==2.3.1
