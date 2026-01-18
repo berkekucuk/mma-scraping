@@ -11,7 +11,7 @@ class SmartSpider(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super(SmartSpider, self).__init__(*args, **kwargs)
-        self.supabase = SupabaseManager
+        self.supabase = SupabaseManager()
         self.mode = kwargs.get('mode', 'upcoming')  # 'live' or 'upcoming'
 
 

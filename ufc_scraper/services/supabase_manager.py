@@ -24,13 +24,15 @@ class SupabaseManager:
             raise e
 
 
-    async def bulk_upsert(self, table_name: str, data: list):
+    async def bulk_upsert(self, table_name: str, data: list, ignore_duplicates=False, on_conflict=None):
         if not data:
-            return
+            return None
 
         try:
             response = await self.client.table(table_name).upsert(
-                data
+                data,
+                ignore_duplicates=ignore_duplicates,
+                on_conflict=on_conflict
             ).execute()
 
             self.logger.debug(f"✅ [{table_name.upper()}] Successfully upserted {len(data)} rows.")
@@ -38,6 +40,26 @@ class SupabaseManager:
 
         except Exception as e:
             self.logger.error(f"❌ Error in bulk upsert for table '{table_name}': {e}")
+            raise e
+
+
+    async def get_events_by_ids(self, event_ids: list):
+        if not event_ids:
+            return {}
+
+        try:
+            response = await self.client.table("events")\
+                .select("*")\
+                .in_("event_id", event_ids)\
+                .execute()
+
+            events_dict = {event["event_id"]: event for event in response.data}
+
+            self.logger.info(f"✅ Fetched {len(events_dict)} events from {len(event_ids)} requested IDs")
+            return events_dict
+
+        except Exception as e:
+            self.logger.error(f"❌ Failed to get events: {e}")
             raise e
 
 
