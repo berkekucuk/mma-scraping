@@ -15,6 +15,8 @@ class DatabasePipeline:
         self.fighter_buffer = {}
         self.participation_buffer = {}
 
+        self.has_fighter_updates = False
+
 
     async def process_item(self, item, spider):
         adapter = ItemAdapter(item)
@@ -41,6 +43,12 @@ class DatabasePipeline:
             if fighter_id:
                 self.fighter_buffer[fighter_id] = item_data
 
+        elif item_type == "fighter_update":
+            fighter_id = item_data.get("fighter_id")
+            if fighter_id:
+                self.fighter_buffer[fighter_id] = item_data
+                self.has_fighter_updates = True
+
         elif item_type == "participation":
             fight_id = item_data.get("fight_id")
             fighter_id = item_data.get("fighter_id")
@@ -56,7 +64,7 @@ class DatabasePipeline:
                          f"{len(self.fight_buffer)} fights, "
                          f"{len(self.fighter_buffer)} fighters, "
                          f"{len(self.participation_buffer)} participations")
-        
+
         return deferred_from_coro(self._flush_all())
 
 
@@ -66,12 +74,16 @@ class DatabasePipeline:
             self.event_buffer.clear()
 
         if self.fighter_buffer:
+            should_ignore_duplicates = not self.has_fighter_updates
+            mode_msg = "INSERT ONLY" if should_ignore_duplicates else "UPDATE"
+            self.logger.info(f"[FIGHTERS] Saving {len(self.fighter_buffer)} fighters in {mode_msg} mode.")
             await self.supabase.bulk_upsert(
                 "fighters",
                 list(self.fighter_buffer.values()),
-                ignore_duplicates=True
+                ignore_duplicates=should_ignore_duplicates
             )
             self.fighter_buffer.clear()
+            self.has_fighter_updates = False
 
         if self.fight_buffer:
             await self.supabase.bulk_upsert("fights", list(self.fight_buffer.values()))
@@ -85,4 +97,4 @@ class DatabasePipeline:
             )
             self.participation_buffer.clear()
 
-        self.logger.info("[BATCH END] All items processed.")
+        self.logger.info("[BATCH END] All items processed successfully.")

@@ -1,11 +1,11 @@
 import scrapy
 
-from ..services.supabase_manager import SupabaseManager
 from ..utils.date_parser import DateParser
 from ..utils.record_parser import RecordParser
 from ..utils.url_parser import UrlParser
 from ..utils.measurement_parser import MeasurementParser
 from ..utils.weight_class_mapper import WeightClassMapper
+from ..items import FighterItem
 
 class FighterSpider(scrapy.Spider):
     name = "fighter"
@@ -19,20 +19,15 @@ class FighterSpider(scrapy.Spider):
     async def start(self):
         if self.target_url and self.fighter_id:
             self.logger.info(f"[RESCUE MODE] Starting scrape for Fighter ID: {self.fighter_id}")
-
             yield scrapy.Request(
                 url=self.target_url,
                 callback=self.parse,
-                cb_kwargs={
-                    'fighter_id': self.fighter_id,
-                    'profile_url': self.target_url
-                },
                 dont_filter=True
             )
         else:
             self.logger.error("Missing required arguments! Usage: scrapy crawl fighter -a url=... -a fighter_id=...")
 
-    async def parse(self, response, fighter_id, profile_url):
+    async def parse(self, response):
         header = response.css("div#fighterPageHeader")
         container = response.css("div#standardDetails")
 
@@ -61,28 +56,20 @@ class FighterSpider(scrapy.Spider):
         country_flag_url = response.urljoin(country_flag_relative_url) if country_flag_relative_url else None
         country_code = UrlParser.extract_country_code(country_flag_url) if country_flag_url else None
 
-        update_data = {
-            "nickname": nickname,
-            "record": record,
-            "date_of_birth": date_of_birth,
-            "height": height,
-            "reach": reach,
-            "weight_class_id": weight_class_id,
-            "born": born,
-            "fighting_out_of": fighting_out_of,
-            "style": style,
-            "country_code": country_code,
-        }
-
-        self.logger.info(f"[DIRECT UPDATE] Updating DB for fighter: {fighter_id}")
-
-        try:
-            await SupabaseManager.update_fighter(fighter_id, update_data)
-            self.logger.info(f"[SUCCESS] Fighter {fighter_id} updated successfully.")
-        except Exception as e:
-            self.logger.error(f"[ERROR] Failed to update fighter {fighter_id} inside Spider: {e}")
-
-        return
+        fighter_item = FighterItem()
+        fighter_item['item_type'] = "fighter_update"
+        fighter_item['fighter_id'] = self.fighter_id
+        fighter_item['nickname'] = nickname
+        fighter_item['record'] = record
+        fighter_item['date_of_birth'] = date_of_birth
+        fighter_item['height'] = height
+        fighter_item['reach'] = reach
+        fighter_item['weight_class_id'] = weight_class_id
+        fighter_item['born'] = born
+        fighter_item['fighting_out_of'] = fighting_out_of
+        fighter_item['style'] = style
+        fighter_item['country_code'] = country_code
+        yield fighter_item
 
     def _extract_detail(self, container, label):
         val = container.xpath(f'.//strong[contains(text(), "{label}")]/following-sibling::span[1]/text()').get(default="").strip()
