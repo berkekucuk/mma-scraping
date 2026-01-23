@@ -14,5 +14,5 @@ The goal is to gather data for personal educational use without disrupting the s
 
 *   **Python**: Core programming language.
 *   **Scrapy**: Framework used for extracting the data.
-*   **Docker**: Containerization for easy deployment and execution.
+*   **Docker + AWS Lambda**: Containerized serverless deployment for scheduled scraping jobs.
 

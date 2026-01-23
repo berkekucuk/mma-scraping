@@ -2,23 +2,20 @@ import os
 import logging
 from datetime import datetime
 import scrapy
-from dotenv import load_dotenv
 from ..services.supabase_manager import SupabaseManager
 from ..utils.ranking_mappings import WEIGHT_CLASS_MAPPING, NAME_EXCEPTIONS
 
-load_dotenv()
-
-
 class RankingSpider(scrapy.Spider):
     name = "ranking"
-    start_urls = ['https://www.ufc.com/rankings']
+    allowed_domains = ['ufc.com']
 
     def __init__(self, *args, **kwargs):
         super(RankingSpider, self).__init__(*args, **kwargs)
-        self.supabase = SupabaseManager
-        self.fighter_cache = None
+        self.supabase = SupabaseManager()
+        self.fighter_cache = {}
         self.rankings_buffer = []
         self._setup_file_logger()
+
 
     def _setup_file_logger(self):
         logs_dir = os.path.join(os.getcwd(), "logs")
@@ -35,10 +32,15 @@ class RankingSpider(scrapy.Spider):
         self.file_logger.addHandler(file_handler)
         self.log_file_path = log_file
 
+
     async def start(self):
         self.fighter_cache = await self.supabase.load_fighter_cache()
-        self.logger.info(f"Loaded {len(self.fighter_cache)} fighters into cache")
-        yield scrapy.Request(url=self.start_urls[0], callback=self.parse)
+
+        if not self.fighter_cache:
+            self.logger.error("⚠️ Fighter Cache is empty! Rankings might not link correctly.")
+
+        yield scrapy.Request(url='https://www.ufc.com/rankings', callback=self.parse)
+
 
     async def parse(self, response):
         groupings = response.css('.view-grouping')
@@ -70,11 +72,12 @@ class RankingSpider(scrapy.Spider):
                     current_rank += 1
 
         if self.rankings_buffer:
-            try:
-                await self.supabase.batch_upsert_rankings(self.rankings_buffer)
-                self.logger.info(f"Batch upserted {len(self.rankings_buffer)} rankings")
-            except Exception as e:
-                self.file_logger.error(f"Batch upsert error: {e}")
+            await self.supabase.bulk_upsert(
+                "rankings",
+                self.rankings_buffer,
+                on_conflict="weight_class_id,rank_number"
+            )
+
 
     def process_fighter(self, fighter_name, weight_class_id, rank):
         fighter_name = fighter_name.strip()
@@ -86,7 +89,7 @@ class RankingSpider(scrapy.Spider):
             data = {
                 "weight_class_id": weight_class_id,
                 "fighter_id": found_id,
-                "rank_number": rank
+                "rank_number": rank,
             }
             self.rankings_buffer.append(data)
             return True

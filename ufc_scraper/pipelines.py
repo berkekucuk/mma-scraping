@@ -15,6 +15,7 @@ class DatabasePipeline:
         self.fighter_buffer = {}
         self.participation_buffer = {}
 
+
     async def process_item(self, item, spider):
         adapter = ItemAdapter(item)
         item_type = adapter.get("item_type")
@@ -55,6 +56,7 @@ class DatabasePipeline:
                          f"{len(self.fight_buffer)} fights, "
                          f"{len(self.fighter_buffer)} fighters, "
                          f"{len(self.participation_buffer)} participations")
+        
         return deferred_from_coro(self._flush_all())
 
 
