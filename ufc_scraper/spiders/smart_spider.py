@@ -12,11 +12,29 @@ class SmartSpider(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super(SmartSpider, self).__init__(*args, **kwargs)
         self.supabase = SupabaseManager()
-        self.mode = kwargs.get('mode', 'upcoming')  # 'live' or 'upcoming'
+        self.mode = kwargs.get('mode', 'upcoming')  # 'live', 'upcoming', or 'single'
+        self.event_url = kwargs.get('event_url')
 
 
     async def start(self):
-        if self.mode == 'live':
+        if self.mode == 'single':
+            if not self.event_url:
+                self.logger.error("[SINGLE MODE] event_url parameter is required. Usage: -a mode=single -a event_url=...")
+                return
+
+            event_id = UrlParser.extract_event_id(self.event_url)
+            if not event_id:
+                self.logger.error(f"[SINGLE MODE] Could not extract event_id from URL: {self.event_url}")
+                return
+
+            self.logger.info(f"[SINGLE MODE] Scraping single event: {event_id}")
+            yield scrapy.Request(
+                url=self.event_url,
+                callback=EventPageParser.parse_card,
+                cb_kwargs={"event_id": event_id, "event_url": self.event_url}
+            )
+
+        elif self.mode == 'live':
             live_event = await self.supabase.get_live_event()
 
             if not live_event:
