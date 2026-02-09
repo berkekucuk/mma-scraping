@@ -1,9 +1,12 @@
 import subprocess
 import logging
 import json
+import boto3
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+lambda_client = boto3.client('lambda')
 
 def handler(event, context):
 
@@ -19,12 +22,22 @@ def handler(event, context):
             else:
                 return {"statusCode": 400, "body": "Undefined task"}
 
-            return {"statusCode": 200, "body": f"Scheduled task '{task_type}' completed"}
+            logger.info(f"Scraper finished for '{task_type}'. Triggering Sync Lambda...")
+            try:
+                lambda_client.invoke(
+                    FunctionName='SupabaseToDynamoSync',
+                    InvocationType='Event',
+                    Payload=json.dumps({'source': f'scraper_{task_type}'}).encode('utf-8')
+                )
+                logger.info("✅ Sync Lambda successfully triggered (Scheduled).")
+            except Exception as e:
+                logger.error(f"❌ WARNING: Error triggering Sync Lambda: {str(e)}")
+
+            return {"statusCode": 200, "body": f"Scheduled task '{task_type}' completed and Sync triggered"}
 
         except subprocess.CalledProcessError as e:
             logger.error(f"Scheduled spider failed: {str(e)}")
             raise e
-
 
     elif 'body' in event:
         try:
@@ -52,7 +65,18 @@ def handler(event, context):
                     "--loglevel", "INFO"
                 ], check=True)
 
-                return {"statusCode": 200, "body": f"Rescue scrape finished for {fighter_id}"}
+                logger.info(f"Rescue scrape finished for fighter {fighter_id}. Triggering Sync Lambda...")
+                try:
+                    lambda_client.invoke(
+                        FunctionName='SupabaseToDynamoSync',
+                        InvocationType='Event',
+                        Payload=json.dumps({'source': f'webhook_rescue_{fighter_id}'}).encode('utf-8')
+                    )
+                    logger.info("✅ Sync Lambda successfully triggered (Webhook).")
+                except Exception as e:
+                    logger.error(f"❌ WARNING: Error triggering Sync Lambda from Webhook: {str(e)}")
+
+                return {"statusCode": 200, "body": f"Rescue scrape finished for {fighter_id} and Sync triggered"}
 
             else:
                 logger.info(f"[WEBHOOK] Ignored event: Table={table}, Type={op_type}")
