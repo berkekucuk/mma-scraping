@@ -76,7 +76,7 @@ class DatabasePipeline:
         if self.fighter_buffer:
             should_ignore_duplicates = not self.has_fighter_updates
             mode_msg = "INSERT ONLY" if should_ignore_duplicates else "UPDATE"
-            self.logger.info(f"[FIGHTERS] Saving {len(self.fighter_buffer)} fighters in {mode_msg} mode.")
+            self.logger.info(f"[FIGHTERS] Processing {len(self.fighter_buffer)} fighters in {mode_msg} mode.")
             await self.supabase.bulk_upsert(
                 "fighters",
                 list(self.fighter_buffer.values()),

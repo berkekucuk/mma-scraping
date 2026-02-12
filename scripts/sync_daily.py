@@ -43,10 +43,10 @@ async def sync_table(prod_client: AsyncClient, backup_client: AsyncClient, table
         print(f"Found {len(data)} records to upsert in {table_name}...")
 
         await backup_client.table(table_name).upsert(data).execute()
-        print(f"✅ Successfully synced {len(data)} records to {table_name}.")
+        print(f"Successfully synced {len(data)} records to {table_name}.")
 
     except Exception as e:
-        print(f"❌ ERROR syncing {table_name}: {e}")
+        print(f"ERROR syncing {table_name}: {e}")
         raise e
 
 async def main():
@@ -63,10 +63,10 @@ async def main():
         for table in SYNC_TABLES:
             await sync_table(prod_client, backup_client, table)
 
-        print("\n🎉 Daily Sync Completed Successfully!")
+        print("\nDaily Sync Completed Successfully!")
 
     except Exception as e:
-        print(f"\n💀 Sync Failed due to error: {e}")
+        print(f"\nSync Failed due to error: {e}")
         exit(1)
 
 if __name__ == "__main__":

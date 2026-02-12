@@ -13,14 +13,14 @@ class SupabaseManager:
         key = os.getenv("SUPABASE_PROD_KEY")
 
         if not all([url, key]):
-            self.logger.error("❌ Supabase credentials are missing in .env")
+            self.logger.error("Supabase credentials are missing in .env")
             raise ValueError("Missing Supabase credentials")
 
         try:
             self.client = AsyncClient(url, key)
-            self.logger.info("✅ Supabase client initialized (Async)")
+            self.logger.info("Supabase client initialized (Async)")
         except Exception as e:
-            self.logger.error(f"❌ Failed to initialize Supabase client: {e}")
+            self.logger.error(f"Failed to initialize Supabase client: {e}")
             raise e
 
 
@@ -35,11 +35,11 @@ class SupabaseManager:
                 on_conflict=on_conflict
             ).execute()
 
-            self.logger.debug(f"✅ [{table_name.upper()}] Successfully upserted {len(data)} rows.")
+            self.logger.debug(f"[{table_name.upper()}] Successfully upserted {len(data)} rows.")
             return response
 
         except Exception as e:
-            self.logger.error(f"❌ Error in bulk upsert for table '{table_name}': {e}")
+            self.logger.error(f"Error in bulk upsert for table '{table_name}': {e}")
             raise e
 
 
@@ -55,11 +55,11 @@ class SupabaseManager:
 
             events_dict = {event["event_id"]: event for event in response.data}
 
-            self.logger.info(f"✅ Fetched {len(events_dict)} events from {len(event_ids)} requested IDs")
+            self.logger.info(f"Fetched {len(events_dict)} events from {len(event_ids)} requested IDs")
             return events_dict
 
         except Exception as e:
-            self.logger.error(f"❌ Failed to get events: {e}")
+            self.logger.error(f"Failed to get events: {e}")
             raise e
 
 
@@ -74,11 +74,11 @@ class SupabaseManager:
             if response.data:
                 return response.data[0]
             else:
-                self.logger.info("ℹ️ No live event found.")
+                self.logger.info("No live event found.")
                 return None
 
         except Exception as e:
-            self.logger.error(f"❌ Failed to get LIVE event: {e}")
+            self.logger.error(f"Failed to get LIVE event: {e}")
             return None
 
 
@@ -88,7 +88,7 @@ class SupabaseManager:
         offset = 0
 
         try:
-            self.logger.info("⏳ Loading fighter cache...")
+            self.logger.info("Loading fighter cache...")
 
             while True:
                 response = await self.client.table('fighters')\
@@ -108,9 +108,9 @@ class SupabaseManager:
 
                 offset += batch_size
 
-            self.logger.info(f"✅ Successfully loaded {len(fighter_cache)} fighters into cache.")
+            self.logger.info(f"Successfully loaded {len(fighter_cache)} fighters into cache.")
             return fighter_cache
 
         except Exception as e:
-            self.logger.error(f"❌ Failed to load fighter cache: {e}")
+            self.logger.error(f"Failed to load fighter cache: {e}")
             return {}

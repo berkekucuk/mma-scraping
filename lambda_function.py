@@ -29,9 +29,9 @@ def handler(event, context):
                     InvocationType='Event',
                     Payload=json.dumps({'source': f'scraper_{task_type}'}).encode('utf-8')
                 )
-                logger.info("✅ Sync Lambda successfully triggered (Scheduled).")
+                logger.info("Sync Lambda successfully triggered (Scheduled).")
             except Exception as e:
-                logger.error(f"❌ WARNING: Error triggering Sync Lambda: {str(e)}")
+                logger.error(f"Error triggering Sync Lambda: {str(e)}")
 
             return {"statusCode": 200, "body": f"Scheduled task '{task_type}' completed and Sync triggered"}
 
@@ -72,9 +72,9 @@ def handler(event, context):
                         InvocationType='Event',
                         Payload=json.dumps({'source': f'webhook_rescue_{fighter_id}'}).encode('utf-8')
                     )
-                    logger.info("✅ Sync Lambda successfully triggered (Webhook).")
+                    logger.info("Sync Lambda successfully triggered (Webhook).")
                 except Exception as e:
-                    logger.error(f"❌ WARNING: Error triggering Sync Lambda from Webhook: {str(e)}")
+                    logger.error(f"Error triggering Sync Lambda from Webhook: {str(e)}")
 
                 return {"statusCode": 200, "body": f"Rescue scrape finished for {fighter_id} and Sync triggered"}
 
