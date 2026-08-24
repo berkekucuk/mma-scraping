@@ -56,3 +56,12 @@ class ParticipantItem:
     result: str | None = None
     record_after_fight: dict | None = None
     is_red_corner: bool | None = None
+
+
+@dataclass
+class RankingItem:
+    item_type: str
+    weight_class_id: str
+    fighter_id: str
+    rank_number: int
+    rank_change: int | None = None

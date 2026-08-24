@@ -1,5 +1,6 @@
 import logging
 from ..utils.ranking_mappings import WEIGHT_CLASS_MAPPING, NAME_EXCEPTIONS
+from ..items import RankingItem
 
 logger = logging.getLogger(__name__)
 
@@ -67,13 +68,13 @@ def _process_fighter(fighter_name, weight_class_id, rank, rank_change, fighter_c
     found_id = fighter_cache.get(search_name)
 
     if found_id:
-        return {
-            "item_type": "ranking",
-            "weight_class_id": weight_class_id,
-            "fighter_id": found_id,
-            "rank_number": rank,
-            "rank_change": rank_change,
-        }
+        return RankingItem(
+            item_type="ranking",
+            weight_class_id=weight_class_id,
+            fighter_id=found_id,
+            rank_number=rank,
+            rank_change=rank_change,
+        )
     else:
         logger.warning(f"Fighter not found in DB: {fighter_name}")
         return None
