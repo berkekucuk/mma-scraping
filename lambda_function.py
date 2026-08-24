@@ -6,6 +6,7 @@ from ufc_scraper.services.supabase_manager import SupabaseManager
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+
 def handler(event, context):
 
     if 'task' in event:
@@ -102,6 +103,17 @@ def handler(event, context):
                 ], check=True)
 
                 return {"statusCode": 200, "body": f"Scrape finished for {fighter_id}"}
+
+            # Ranking mode: scrapes rankings page.
+            elif task_type == 'ranking':
+                logger.info(f"[TASK:{task_type}] Starting ranking scraper...")
+                subprocess.run([
+                    "scrapy", "crawl", "ranking",
+                    "--loglevel", "INFO"
+                ], check=True)
+
+                logger.info(f"[TASK:{task_type}] Ranking scraper finished.")
+                return {"statusCode": 200, "body": f"Scheduled task '{task_type}' completed"}
 
             else:
                 return {"statusCode": 400, "body": "Undefined task"}
