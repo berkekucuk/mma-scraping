@@ -67,9 +67,10 @@ class DatabasePipeline:
         self.logger.info(f"[BATCH START] Processing buffered items: "
                          f"{len(self.event_buffer)} events, "
                          f"{len(self.fight_buffer)} fights, "
-                         f"{len(self.fighter_buffer)} basic fighters, "
+                         f"{len(self.fighter_buffer)} fighters, "
                          f"{len(self.fighter_update_buffer)} fighter updates, "
-                         f"{len(self.participation_buffer)} participations")
+                         f"{len(self.participation_buffer)} participations, "
+                         f"{len(self.ranking_buffer)} rankings")
 
         await self._flush_all()
 
