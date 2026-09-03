@@ -1,6 +1,5 @@
 import subprocess
 import logging
-import random
 from ufc_scraper.services.supabase_manager import SupabaseManager
 
 logger = logging.getLogger()
@@ -42,11 +41,12 @@ def handler(event, context):
             elif task_type == 'step_function_loop':
                 event_url = event.get('event_url')
                 event_id = event.get('event_id')
+                completed_runs = event.get('completed_runs', 0)
 
                 if not event_url or not event_id:
                     return {"statusCode": 400, "body": "Missing event_id or event_url"}
 
-                logger.info(f"[TASK:{task_type}] Scraping live event: {event_id}")
+                logger.info(f"[TASK:{task_type}] Scraping live event: {event_id} (completed_runs: {completed_runs})")
 
                 subprocess.run([
                     "scrapy", "crawl", "smart",
@@ -60,12 +60,16 @@ def handler(event, context):
                 current_status = SupabaseManager().get_event_status(event_id)
 
                 if current_status == "completed":
-                    logger.info(f"[TASK:{task_type}] Event {event_id} is COMPLETED.")
-                    return {"statusCode": 200, "step_status": "COMPLETED", "wait_seconds": 0}
+                    if completed_runs < 3:
+                        next_run = completed_runs + 1
+                        logger.info(f"[TASK:{task_type}] Event {event_id} is COMPLETED, scheduling extra run {next_run}/3.")
+                        return {"statusCode": 200, "step_status": "IN_PROGRESS", "completed_runs": next_run}
+                    else:
+                        logger.info(f"[TASK:{task_type}] Event {event_id} is COMPLETED and all 3 extra runs are done. Finishing loop.")
+                        return {"statusCode": 200, "step_status": "COMPLETED", "completed_runs": completed_runs}
                 else:
-                    wait_time = random.randint(90, 150)
-                    logger.info(f"[TASK:{task_type}] Event {event_id} is still {current_status.upper()}. Returning IN_PROGRESS with jitter: {wait_time}s.")
-                    return {"statusCode": 200, "step_status": "IN_PROGRESS", "wait_seconds": wait_time}
+                    logger.info(f"[TASK:{task_type}] Event {event_id} is still {current_status.upper()}. Returning IN_PROGRESS.")
+                    return {"statusCode": 200, "step_status": "IN_PROGRESS", "completed_runs": 0}
 
             # Single mode: scrapes a single event page once.
             elif task_type == 'single':
