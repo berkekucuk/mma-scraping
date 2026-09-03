@@ -76,5 +76,5 @@ def _process_fighter(fighter_name, weight_class_id, rank, rank_change, fighter_c
             rank_change=rank_change,
         )
     else:
-        logger.warning(f"Fighter not found in DB: {fighter_name}")
+        logger.error(f"Fighter not found in DB: {fighter_name}")
         return None
